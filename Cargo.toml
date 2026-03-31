@@ -4,3 +4,24 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+pg_arrow = { path = "../pg_arrow" }
+
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.9"
+derive-where = "1.0"
+log = "0.4"
+env_logger = "0.11"
+thiserror = "2"
+arrow = "58.0.0"
+datafusion = "53.0.0"
+tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros"] }
+async-trait = "0.1.89"
+futures = "0.3.32"
+
+[lib]
+name = "pg_fusion_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "pg_fusion_cli"
+path = "src/main.rs"
