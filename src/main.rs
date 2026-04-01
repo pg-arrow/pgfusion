@@ -1,68 +1,141 @@
-use std::{error::Error, sync::Arc};
+use std::time::Instant;
 
-use datafusion::{execution::context::SessionContext, prelude::SessionConfig};
-use futures::StreamExt;
-use pg_arrow::{
-    file::error::PgError,
-    table::PgTableReader,
-    types::{PgAttribute, PgCatalogRelation, PgClass},
-};
-use pg_fusion_lib::CustomDataSource;
-use tokio::sync::Mutex;
+use clap::Parser;
+use datafusion::common::DataFusionError;
+use datafusion::execution::context::SessionContext;
+use pg_arrow::file::{error::PgError, set_data_dir};
+use pg_fusion_lib::create_session;
+use rustyline::DefaultEditor;
+use tokio_util::sync::CancellationToken;
+
+#[derive(Parser)]
+#[command(name = "pg_fusion_cli")]
+#[command(about = "Query PostgreSQL data files directly using SQL via DataFusion")]
+struct Cli {
+    /// Path to the PostgreSQL data directory (PGDATA)
+    #[arg(short = 'd', long)]
+    data_dir: String,
+
+    /// Database OID to read from (found under data_dir/base/<db_id>)
+    #[arg(long, default_value_t = 16384)]
+    db_id: usize,
+}
+
+async fn execute_query(ctx: &SessionContext, sql: &str) -> Result<(), DataFusionError> {
+    let cancel = CancellationToken::new();
+    let cancel_clone = cancel.clone();
+    let ctrlc_handle = tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.ok();
+        cancel_clone.cancel();
+    });
+
+    let df = ctx.sql(sql).await?;
+    let mut query_handle = tokio::task::spawn(async move { df.show().await });
+
+    let result = tokio::select! {
+        _ = cancel.cancelled() => {
+            query_handle.abort();
+            eprintln!("\nQuery cancelled.");
+            Ok(())
+        }
+        join_result = &mut query_handle => {
+            match join_result {
+                Ok(inner) => inner,
+                Err(join_err) if join_err.is_panic() => {
+                    let panic_msg = match join_err.into_panic().downcast::<String>() {
+                        Ok(msg) => *msg,
+                        Err(payload) => match payload.downcast::<&str>() {
+                            Ok(msg) => msg.to_string(),
+                            Err(_) => "unknown panic".to_string(),
+                        },
+                    };
+                    eprintln!("Query panicked: {panic_msg}");
+                    Ok(())
+                }
+                Err(_) => {
+                    eprintln!("Query task cancelled");
+                    Ok(())
+                }
+            }
+        }
+    };
+
+    ctrlc_handle.abort();
+    result
+}
 
 #[tokio::main]
 async fn main() -> Result<(), PgError> {
-    let mut config = SessionConfig::new();
-    config.options_mut().catalog.information_schema = true;
-    let ctx = SessionContext::new_with_config(config);
+    env_logger::init();
 
-    let db_id = 16384;
-    let table_reader = PgTableReader::new(db_id).unwrap();
-    for table_details in table_reader.get_all_tables().unwrap() {
-        let custom_table_provider = CustomDataSource {
-            db_id: db_id,
-            schema: Arc::new(table_details.1.to_arrow_schema()),
-            pg_schema: table_details.1,
-            table_metadata: table_details.0.clone(),
-        };
+    let cli = Cli::parse();
 
-        ctx.register_table(table_details.0.relname, Arc::new(custom_table_provider))
-            .unwrap();
+    set_data_dir(cli.data_dir);
+    let db_id = cli.db_id;
+
+    let ctx = create_session(db_id).expect("failed to create session");
+
+    println!("pg_fusion_cli");
+    println!("Type \\? for help.\n");
+
+    let mut rl = DefaultEditor::new().unwrap();
+    let mut timing = false;
+
+    loop {
+        let readline = rl.readline("pg_fusion> ");
+        match readline {
+            Ok(line) => {
+                let mut trimmed = line.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+
+                let _ = rl.add_history_entry(trimmed);
+
+                if trimmed == "\\q" || trimmed == "quit" || trimmed == "exit" {
+                    break;
+                }
+
+                if trimmed == "\\?" || trimmed == "\\help" {
+                    println!("  \\dt        List tables");
+                    println!("  \\timing    Toggle query timing");
+                    println!("  \\?         Show this help");
+                    println!("  \\q         Quit (also: quit, exit, Ctrl-D)");
+                    continue;
+                }
+
+                if trimmed == "\\dt" {
+                    trimmed = "SHOW TABLES;";
+                }
+
+                if trimmed == "\\timing" {
+                    timing = !timing;
+                    println!("Timing is {}.", if timing { "on" } else { "off" });
+                    continue;
+                }
+
+                let start = Instant::now();
+
+                if let Err(e) = execute_query(&ctx, trimmed).await {
+                    eprintln!("Error: {e}");
+                }
+
+                if timing {
+                    let elapsed = start.elapsed();
+                    println!("Time: {:.3}ms", elapsed.as_secs_f64() * 1000.0);
+                }
+            }
+            Err(
+                rustyline::error::ReadlineError::Interrupted | rustyline::error::ReadlineError::Eof,
+            ) => {
+                break;
+            }
+            Err(e) => {
+                eprintln!("Readline error: {e}");
+                break;
+            }
+        }
     }
 
-    // let df = ctx
-    //     .sql("SELECT * FROM information_schema.tables WHERE table_type = 'BASE TABLE'")
-    //     .await
-    //     .unwrap();
-    // let df = ctx
-    //     .sql(
-    //         "SHOW COLUMNS FROM pgbench_accounts;", //         "SELECT
-    //                                                //     table_schema,
-    //                                                //     table_name,
-    //                                                //     column_name,
-    //                                                //     data_type,
-    //                                                //     is_nullable
-    //                                                // FROM information_schema.columns where table_name = 'pgbench_accounts'
-    //                                                // ",
-    //     )
-    //     .await
-    //     .unwrap();
-
-    // let df = ctx
-    //     .sql("SELECT orders.order_number, orders.total, customers.first_name FROM orders INNER JOIN customers ON orders.customer_id = customers.id")
-    //     .await
-    //     .unwrap();
-    let df = ctx
-        .sql("select bid from pgbench_accounts UNION ALL select id from customers;")
-        .await
-        .unwrap();
-    // let mut stream = df.execute_stream().await.unwrap();
-    // while let Some(Ok(batch)) = stream.next().await {
-    //     let df = ctx.read_batch(batch).unwrap();
-    //     // df.show().await.unwrap();
-    // }
-    // df.show_limit(1).await.unwrap();
-    // println!("Got {} rows", df.count().await.unwrap());
-    df.explain(false, false).unwrap().show().await.unwrap();
     Ok(())
 }
