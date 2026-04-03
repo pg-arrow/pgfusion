@@ -19,6 +19,14 @@ struct Cli {
     /// Database OID to read from (found under data_dir/base/<db_id>)
     #[arg(long, default_value_t = 16384)]
     db_id: usize,
+
+    /// Execute a SQL command and exit
+    #[arg(short = 'c', long = "command")]
+    command: Option<String>,
+
+    /// Execute SQL commands from a file and exit
+    #[arg(short = 'f', long = "file")]
+    file: Option<String>,
 }
 
 async fn execute_query(ctx: &SessionContext, sql: &str) -> Result<(), DataFusionError> {
@@ -74,6 +82,32 @@ async fn main() -> Result<(), PgError> {
     let db_id = cli.db_id;
 
     let ctx = create_session(db_id).expect("failed to create session");
+
+    if let Some(command) = cli.command {
+        if let Err(e) = execute_query(&ctx, &command).await {
+            eprintln!("Error: {e}");
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+
+    if let Some(file) = cli.file {
+        let sql = std::fs::read_to_string(&file).unwrap_or_else(|e| {
+            eprintln!("Failed to read {file}: {e}");
+            std::process::exit(1);
+        });
+        for stmt in sql.split(';') {
+            let stmt = stmt.trim();
+            if stmt.is_empty() {
+                continue;
+            }
+            if let Err(e) = execute_query(&ctx, stmt).await {
+                eprintln!("Error: {e}");
+                std::process::exit(1);
+            }
+        }
+        return Ok(());
+    }
 
     println!("pg_fusion_cli");
     println!("Type \\? for help.\n");

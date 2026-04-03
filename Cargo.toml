@@ -14,7 +14,11 @@ env_logger = "0.11"
 thiserror = "2"
 arrow = "58.0.0"
 datafusion = "53.0.0"
-tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros", "signal"] }
+tokio = { version = "1.50.0", features = [
+  "rt-multi-thread",
+  "macros",
+  "signal",
+] }
 tokio-util = "0.7"
 async-trait = "0.1.89"
 futures = "0.3.32"
@@ -35,3 +39,6 @@ criterion = { version = "0.6", features = ["async_tokio"] }
 [[bench]]
 name = "query_bench"
 harness = false
+
+[profile.release]
+debug = true
