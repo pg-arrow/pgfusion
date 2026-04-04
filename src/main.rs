@@ -27,6 +27,10 @@ struct Cli {
     /// Execute SQL commands from a file and exit
     #[arg(short = 'f', long = "file")]
     file: Option<String>,
+
+    /// Enable query timing
+    #[arg(short = 't', long = "timing")]
+    timing: bool,
 }
 
 async fn execute_query(ctx: &SessionContext, sql: &str) -> Result<(), DataFusionError> {
@@ -84,9 +88,14 @@ async fn main() -> Result<(), PgError> {
     let ctx = create_session(db_id).expect("failed to create session");
 
     if let Some(command) = cli.command {
+        let start = Instant::now();
         if let Err(e) = execute_query(&ctx, &command).await {
             eprintln!("Error: {e}");
             std::process::exit(1);
+        }
+        if cli.timing {
+            let elapsed = start.elapsed();
+            eprintln!("Time: {:.3}ms", elapsed.as_secs_f64() * 1000.0);
         }
         return Ok(());
     }
@@ -101,9 +110,14 @@ async fn main() -> Result<(), PgError> {
             if stmt.is_empty() {
                 continue;
             }
+            let start = Instant::now();
             if let Err(e) = execute_query(&ctx, stmt).await {
                 eprintln!("Error: {e}");
                 std::process::exit(1);
+            }
+            if cli.timing {
+                let elapsed = start.elapsed();
+                eprintln!("Time: {:.3}ms", elapsed.as_secs_f64() * 1000.0);
             }
         }
         return Ok(());
@@ -113,7 +127,7 @@ async fn main() -> Result<(), PgError> {
     println!("Type \\? for help.\n");
 
     let mut rl = DefaultEditor::new().unwrap();
-    let mut timing = false;
+    let mut timing = cli.timing;
 
     loop {
         let readline = rl.readline("pg_fusion> ");
