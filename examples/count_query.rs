@@ -1,4 +1,4 @@
-use pg_fusion_lib::create_session;
+use pgfusion_lib::create_session;
 
 #[tokio::main]
 async fn main() {

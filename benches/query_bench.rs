@@ -1,5 +1,5 @@
 use criterion::{Criterion, criterion_group, criterion_main};
-use pg_fusion_lib::create_session;
+use pgfusion_lib::create_session;
 use tokio::runtime::Runtime;
 
 fn bench_count_star_pgbench_accounts(c: &mut Criterion) {

@@ -12,3 +12,19 @@ Cargo.lock
 
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
+
+# PostgreSQL test setup
+pg-test-config.toml
+
+# Profiling artifacts
+flamegraph.svg
+perf.data
+perf.data.old
+
+# Benchmark data files (e.g. ClickBench hits.tsv is ~75GB)
+benches/clickbench/hits.tsv
+benches/clickbench/results.csv
+
+# Test output/results
+tests/consistency/results.txt
+tests/sql_correctness/results.txt

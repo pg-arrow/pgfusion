@@ -4,7 +4,21 @@ mod tests {
     #[test]
     fn test_pg_arrow() {
         use pg_arrow::table::PgTableReader;
-        use std::time::Instant;
+        use std::time::{Duration, Instant};
+
+        fn format_elapsed(elapsed: Duration) -> String {
+            let ms = elapsed.as_secs_f64() * 1000.0;
+            if elapsed.as_secs() >= 1 {
+                let total_secs = elapsed.as_secs();
+                let hrs = total_secs / 3600;
+                let mins = (total_secs % 3600) / 60;
+                let secs = total_secs % 60;
+                let millis = elapsed.subsec_millis();
+                format!("{:.3} ms ({:02}:{:02}:{:02}.{:03})", ms, hrs, mins, secs, millis)
+            } else {
+                format!("{:.3} ms", ms)
+            }
+        }
 
         env_logger::init();
 
@@ -23,14 +37,14 @@ mod tests {
         let start = Instant::now();
         let rows = reader.fetch_by_limit(10_000_000).unwrap();
         let duration = start.elapsed();
-        println!("Elapsed: {:.3} ms", duration.as_secs_f64() * 1000.0);
+        println!("Elapsed: {}", format_elapsed(duration));
         println!("Total rows: {}", rows.len());
 
         // Fetch all rows
         let start = Instant::now();
         let rows = reader.fetch_by_limit(10_000_000).unwrap();
         let duration = start.elapsed();
-        println!("Elapsed: {:.3} ms", duration.as_secs_f64() * 1000.0);
+        println!("Elapsed: {}", format_elapsed(duration));
         println!("Total rows: {}", rows.len());
 
         // Fetch with limit
@@ -55,7 +69,7 @@ use datafusion::physical_plan::{Partitioning, PhysicalExpr, project_schema};
 use datafusion::arrow::array::{UInt8Builder, UInt64Builder};
 use datafusion::arrow::datatypes::{DataType, Field, Schema, SchemaRef};
 use datafusion::arrow::record_batch::RecordBatch;
-use datafusion::common::Result;
+use datafusion::common::{DataFusionError, Result};
 use datafusion::execution::context::TaskContext;
 use datafusion::physical_plan::expressions::PhysicalSortExpr;
 use datafusion::physical_plan::memory::MemoryStream;
@@ -66,9 +80,9 @@ use datafusion::physical_plan::{
 use datafusion::prelude::SessionContext;
 use futures::Stream;
 use pg_arrow::file::error::PgError;
-use pg_arrow::file::reader::{ChunkReader, Oid, PageRowIter, TableFileReader};
+use pg_arrow::file::reader::{AsyncBatchStream, Oid, TableFileReader};
 use pg_arrow::file::tuple::ColumnSearchArg;
-use pg_arrow::table::{PgRow, PgTableReader, decode_row};
+use pg_arrow::table::{PgRow, PgTableReader, decode_row, decode_row_projected};
 use pg_arrow::types::{PgClass, PgSchema};
 use std::any::Any;
 use std::collections::{BTreeMap, HashMap};
@@ -136,28 +150,41 @@ impl ExecutionPlan for CustomExec {
 
     fn execute(
         &self,
-        _partition: usize,
+        partition: usize,
         _context: Arc<TaskContext>,
     ) -> Result<SendableRecordBatchStream> {
-        let reader = TableFileReader {
-            db_id: self.db_id,
-            relation_id: self.table_metadata.relfilenode as usize,
+        const NUM_PARTITIONS: usize = 10;
+
+        let projection = self.projections.as_ref().map(|(_, cols)| cols.clone());
+        let total_pages = self.table_metadata.relpages.max(0) as usize;
+        let pages_per_partition = (total_pages + NUM_PARTITIONS - 1) / NUM_PARTITIONS.max(1);
+        let start = partition * pages_per_partition;
+        let end = ((partition + 1) * pages_per_partition).min(total_pages);
+
+        let batch_stream = AsyncBatchStream::new(
+            self.db_id,
+            self.table_metadata.relfilenode as usize,
+            self.schema.clone(),
+            projection,
+        )
+        .with_page_range(start, end);
+
+        let arrow_schema = match &self.projections {
+            Some((schema, _)) => schema.clone(),
+            None => Arc::new(self.schema.to_arrow_schema()),
         };
 
-        let page_reader = reader
-            .get_page_reader()
-            .map_err(|e| PgError::CatalogBootstrapFailed {
-                detail: format!("failed to open table file: {e}"),
+        let inner = futures::stream::unfold(batch_stream, |mut stream| async move {
+            let result = stream.next_batch().await;
+            result.map(|r| {
+                let mapped = r.map_err(|e| DataFusionError::Execution(e.to_string()));
+                (mapped, stream)
             })
-            .unwrap();
-
-        let row_result = page_reader.into_iter();
+        });
 
         Ok(Box::pin(SampleStream {
-            page_row_iter: row_result,
-            projections: self.projections.clone(),
-            metrics: BaselineMetrics::new(&self.metrics, 0),
-            schema: self.schema.clone(),
+            inner: Box::pin(inner),
+            arrow_schema,
         }))
     }
 }
@@ -184,7 +211,7 @@ impl CustomExec {
             projections: proj.clone(),
             properties: Arc::new(PlanProperties::new(
                 EquivalenceProperties::new(proj.unwrap().0),
-                Partitioning::UnknownPartitioning(1),
+                Partitioning::UnknownPartitioning(10),
                 EmissionType::Incremental,
                 Boundedness::Bounded,
             )),
@@ -193,44 +220,23 @@ impl CustomExec {
     }
 }
 
-/// Stream adapter that applies sampling to each batch.
-struct SampleStream<R: ChunkReader> {
-    page_row_iter: PageRowIter<R>,
-    projections: Option<(SchemaRef, Vec<usize>)>,
-    metrics: BaselineMetrics,
-    schema: PgSchema,
+/// Wraps a `futures::Stream` with a schema to implement DataFusion's `RecordBatchStream`.
+struct SampleStream {
+    inner: Pin<Box<dyn Stream<Item = Result<RecordBatch>> + Send>>,
+    arrow_schema: SchemaRef,
 }
 
-impl<R: ChunkReader> Stream for SampleStream<R> {
+impl Stream for SampleStream {
     type Item = Result<RecordBatch>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let mut rows = Vec::new();
-        while let Some(Ok(next_row)) = self.page_row_iter.next() {
-            rows.push(decode_row(&next_row, &self.schema).unwrap());
-            if rows.len() == 100 {
-                break;
-            }
-        }
-        if !rows.is_empty() {
-            let rb = PgRow::to_record_batch(rows.as_slice(), &self.schema).unwrap();
-            let projected_rb = rb
-                .project(self.projections.as_ref().unwrap().1.as_slice())
-                .unwrap();
-            Poll::Ready(Some(Ok(projected_rb)))
-        } else {
-            Poll::Ready(None)
-        }
+        self.inner.as_mut().poll_next(cx)
     }
 }
 
-impl<R: ChunkReader> RecordBatchStream for SampleStream<R> {
+impl RecordBatchStream for SampleStream {
     fn schema(&self) -> SchemaRef {
-        if let Some(proj) = &self.projections {
-            proj.0.clone()
-        } else {
-            Arc::new(self.schema.to_arrow_schema())
-        }
+        self.arrow_schema.clone()
     }
 }
 
@@ -253,6 +259,7 @@ pub fn create_session(
             pg_schema: table_details.1,
             table_metadata: table_details.0.clone(),
         };
+
         ctx.register_table(&table_details.0.relname, Arc::new(provider))
             .unwrap();
     }

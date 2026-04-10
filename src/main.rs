@@ -1,10 +1,10 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use clap::Parser;
 use datafusion::common::DataFusionError;
 use datafusion::execution::context::SessionContext;
 use pg_arrow::file::{error::PgError, set_data_dir};
-use pg_fusion_lib::create_session;
+use pgfusion_lib::create_session;
 use rustyline::DefaultEditor;
 use tokio_util::sync::CancellationToken;
 
@@ -31,6 +31,20 @@ struct Cli {
     /// Enable query timing
     #[arg(short = 't', long = "timing")]
     timing: bool,
+}
+
+fn format_elapsed(elapsed: Duration) -> String {
+    let ms = elapsed.as_secs_f64() * 1000.0;
+    if elapsed.as_secs() >= 1 {
+        let total_secs = elapsed.as_secs();
+        let hrs = total_secs / 3600;
+        let mins = (total_secs % 3600) / 60;
+        let secs = total_secs % 60;
+        let millis = elapsed.subsec_millis();
+        format!("{:.3}ms ({:02}:{:02}:{:02}.{:03})", ms, hrs, mins, secs, millis)
+    } else {
+        format!("{:.3}ms", ms)
+    }
 }
 
 async fn execute_query(ctx: &SessionContext, sql: &str) -> Result<(), DataFusionError> {
@@ -76,6 +90,11 @@ async fn execute_query(ctx: &SessionContext, sql: &str) -> Result<(), DataFusion
     result
 }
 
+use mimalloc::MiMalloc;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
+
 #[tokio::main]
 async fn main() -> Result<(), PgError> {
     env_logger::init();
@@ -95,7 +114,7 @@ async fn main() -> Result<(), PgError> {
         }
         if cli.timing {
             let elapsed = start.elapsed();
-            eprintln!("Time: {:.3}ms", elapsed.as_secs_f64() * 1000.0);
+            eprintln!("Time: {}", format_elapsed(elapsed));
         }
         return Ok(());
     }
@@ -117,7 +136,7 @@ async fn main() -> Result<(), PgError> {
             }
             if cli.timing {
                 let elapsed = start.elapsed();
-                eprintln!("Time: {:.3}ms", elapsed.as_secs_f64() * 1000.0);
+                eprintln!("Time: {}", format_elapsed(elapsed));
             }
         }
         return Ok(());
@@ -170,7 +189,7 @@ async fn main() -> Result<(), PgError> {
 
                 if timing {
                     let elapsed = start.elapsed();
-                    println!("Time: {:.3}ms", elapsed.as_secs_f64() * 1000.0);
+                    println!("Time: {}", format_elapsed(elapsed));
                 }
             }
             Err(

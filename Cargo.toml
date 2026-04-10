@@ -1,5 +1,5 @@
 [package]
-name = "pg_df"
+name = "pgfusion"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,14 +7,14 @@ edition = "2024"
 pg_arrow = { path = "../pg_arrow" }
 
 serde = { version = "1.0", features = ["derive"] }
-toml = "0.9"
+toml = "1.1.0"
 derive-where = "1.0"
 log = "0.4"
 env_logger = "0.11"
 thiserror = "2"
 arrow = "58.0.0"
 datafusion = "53.0.0"
-tokio = { version = "1.50.0", features = [
+tokio = { version = "1.51.1", features = [
   "rt-multi-thread",
   "macros",
   "signal",
@@ -23,14 +23,15 @@ tokio-util = "0.7"
 async-trait = "0.1.89"
 futures = "0.3.32"
 clap = { version = "4", features = ["derive"] }
-rustyline = "15"
+rustyline = "18.0.0"
+mimalloc = "0.1"
 
 [lib]
-name = "pg_fusion_lib"
+name = "pgfusion_lib"
 path = "src/lib.rs"
 
 [[bin]]
-name = "pg_fusion_cli"
+name = "pgfusion_cli"
 path = "src/main.rs"
 
 [dev-dependencies]
