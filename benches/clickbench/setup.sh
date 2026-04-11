@@ -51,6 +51,8 @@ fi
 PSQL="$BIN_DIR/psql"
 PG_CTL="$BIN_DIR/pg_ctl"
 PGBENCH="$BIN_DIR/pgbench"
+LIB_DIR="$(cd "$BIN_DIR/../lib" && pwd)"
+export DYLD_LIBRARY_PATH="$LIB_DIR${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
 DB_NAME="clickbench"
 HITS_TSV="$SCRIPT_DIR/hits.tsv"
 HITS_URL="https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz"
@@ -132,23 +134,21 @@ else
     log_ok "Loaded $ROW_COUNT rows into hits table"
 fi
 
-# ── Checkpoint and stop server ───────────────────────────────────────────────
+# ── Checkpoint and finalize ──────────────────────────────────────────────────
 
 log_info "Running CHECKPOINT to flush all data to disk..."
 "$PSQL" "$DB_NAME" -c "CHECKPOINT;"
+
+log_info "Running ANALYZE to update planner statistics..."
+"$PSQL" "$DB_NAME" -c "ANALYZE hits;"
 
 # Get the database OID for pg_fusion
 DB_OID=$("$PSQL" -t -A -c "SELECT oid FROM pg_database WHERE datname = '$DB_NAME';" postgres)
 log_ok "Database OID: $DB_OID"
 
-if [ "$SERVER_WAS_RUNNING" = false ]; then
-    log_info "Stopping PostgreSQL (pg_fusion reads data files directly)..."
-    "$PG_CTL" -D "$DATA_DIR" stop
-    log_ok "PostgreSQL stopped"
-else
-    log_info "Server was already running, leaving it up"
-    log_info "Stop it before running pg_fusion: $PG_CTL -D $DATA_DIR stop"
-fi
+log_info "PostgreSQL left running (pgfusion can read data files while PG is up)"
+log_info "For benchmark performance tuning, run:"
+log_info "  $SCRIPT_DIR/tune_postgres.sh $PG_VERSION"
 
 # ── Print usage ──────────────────────────────────────────────────────────────
 

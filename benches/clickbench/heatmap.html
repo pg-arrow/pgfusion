@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClickBench Heatmap: pgfusion vs PostgreSQL</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    background: #0d1117;
+    color: #c9d1d9;
+    padding: 24px;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #f0f6fc;
+  }
+  .meta {
+    font-size: 12px;
+    color: #8b949e;
+    margin-bottom: 20px;
+  }
+  .meta span { margin-right: 16px; }
+
+  .summary {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .summary-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 12px 20px;
+    min-width: 160px;
+  }
+  .summary-card .label { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
+  .summary-card .value { font-size: 22px; font-weight: 600; margin-top: 2px; }
+  .summary-card .value.pf { color: #58a6ff; }
+  .summary-card .value.pg { color: #f78166; }
+  .summary-card .value.good { color: #3fb950; }
+
+  .heatmap-container {
+    overflow-x: auto;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 900px;
+  }
+  th {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 12px;
+    text-align: center;
+    color: #8b949e;
+    border-bottom: 2px solid #30363d;
+  }
+  th.query-col { text-align: left; width: 70px; }
+  th.ratio-col { width: 90px; }
+
+  td {
+    padding: 0;
+    text-align: center;
+    position: relative;
+  }
+  td.query-name {
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    padding: 0 12px;
+    color: #c9d1d9;
+    background: transparent !important;
+  }
+
+  .cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    margin: 1px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: default;
+    transition: opacity 0.15s;
+    min-width: 100px;
+  }
+  .cell:hover { opacity: 0.8; }
+  .cell.error {
+    background: #21262d;
+    color: #484f58;
+  }
+
+  td.ratio-cell {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 0 8px;
+  }
+  .ratio-faster { color: #3fb950; }
+  .ratio-slower { color: #f85149; }
+  .ratio-na { color: #484f58; }
+
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+    font-size: 11px;
+    color: #8b949e;
+  }
+  .legend-bar {
+    width: 200px;
+    height: 14px;
+    border-radius: 3px;
+    background: linear-gradient(to right, #26a641, #e8860c, #f85149);
+  }
+  .legend-label { white-space: nowrap; }
+
+  .error-note {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #8b949e;
+  }
+  .error-swatch {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    background: #21262d;
+    vertical-align: middle;
+    margin-right: 4px;
+  }
+
+  .tooltip {
+    display: none;
+    position: fixed;
+    background: #1c2128;
+    border: 1px solid #444c56;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .tooltip .tt-query { font-weight: 600; color: #f0f6fc; margin-bottom: 4px; }
+  .tooltip .tt-engine { color: #8b949e; }
+  .tooltip .tt-time { font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>ClickBench Heatmap</h1>
+<div class="meta" id="meta"></div>
+
+<div class="summary" id="summary"></div>
+
+<div class="heatmap-container">
+  <table id="heatmap"></table>
+</div>
+
+<div class="legend">
+  <span class="legend-label">Fast</span>
+  <div class="legend-bar"></div>
+  <span class="legend-label">Slow</span>
+</div>
+<div class="error-note">
+  <span class="error-swatch"></span> ERROR / unsupported query
+</div>
+
+<div class="tooltip" id="tooltip">
+  <div class="tt-query"></div>
+  <div class="tt-engine"></div>
+  <div class="tt-time"></div>
+</div>
+
+<script>
+(async function() {
+  let data;
+  try {
+    const resp = await fetch('./results.json');
+    data = await resp.json();
+  } catch(e) {
+    document.getElementById('meta').textContent = 'Failed to load results.json. Run the benchmark first, then serve this directory (python3 -m http.server).';
+    return;
+  }
+
+  const queries = data.queries;
+
+  // ── Meta ────────────────────────────────────────────────────────────────
+  const meta = document.getElementById('meta');
+  meta.innerHTML = [
+    `<span>Run: ${data.timestamp}</span>`,
+    `<span>Runs/query: ${data.runs_per_query}</span>`,
+    `<span>PG version: ${data.pg_version}</span>`,
+    `<span>PG parallel workers: ${data.pg_parallel_workers}</span>`,
+    `<span>PG shared_buffers: ${data.pg_shared_buffers}</span>`,
+  ].join('');
+
+  // ── Summary cards ──────────────────────────────────────────────────────
+  const pfPass = queries.filter(q => q.pgfusion_status === 'OK').length;
+  const pgPass = queries.filter(q => q.postgres_status === 'OK').length;
+  const pfTotal = queries.reduce((s, q) => s + (q.pgfusion_ms || 0), 0);
+  const pgTotal = queries.reduce((s, q) => s + (q.postgres_ms || 0), 0);
+  const bothPass = queries.filter(q => q.pgfusion_status === 'OK' && q.postgres_status === 'OK').length;
+
+  document.getElementById('summary').innerHTML = `
+    <div class="summary-card"><div class="label">pgfusion passed</div><div class="value pf">${pfPass} / ${queries.length}</div></div>
+    <div class="summary-card"><div class="label">PostgreSQL passed</div><div class="value pg">${pgPass} / ${queries.length}</div></div>
+    <div class="summary-card"><div class="label">pgfusion total</div><div class="value pf">${fmt(pfTotal)}</div></div>
+    <div class="summary-card"><div class="label">PostgreSQL total</div><div class="value pg">${fmt(pgTotal)}</div></div>
+    <div class="summary-card"><div class="label">Both passed</div><div class="value good">${bothPass}</div></div>
+  `;
+
+  // ── Color scale (log) ─────────────────────────────────────────────────
+  const allTimes = queries.flatMap(q => [q.pgfusion_ms, q.postgres_ms]).filter(t => t != null && t > 0);
+  const minTime = Math.max(Math.min(...allTimes), 1);
+  const maxTime = Math.max(...allTimes);
+  const logMin = Math.log10(minTime);
+  const logMax = Math.log10(maxTime);
+
+  function timeToColor(ms) {
+    if (ms == null || ms <= 0) return null;
+    const t = Math.max(0, Math.min(1, (Math.log10(ms) - logMin) / (logMax - logMin || 1)));
+    // green -> orange -> red (3-stop interpolation)
+    let r, g, b;
+    if (t < 0.5) {
+      const s = t * 2; // 0..1 within first half
+      r = Math.round(38 + (232 - 38) * s);   // #26 -> #e8
+      g = Math.round(166 + (134 - 166) * s);  // #a6 -> #86
+      b = Math.round(65 + (12 - 65) * s);     // #41 -> #0c
+    } else {
+      const s = (t - 0.5) * 2; // 0..1 within second half
+      r = Math.round(232 + (248 - 232) * s);  // #e8 -> #f8
+      g = Math.round(134 + (81 - 134) * s);   // #86 -> #51
+      b = Math.round(12 + (73 - 12) * s);     // #0c -> #49
+    }
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+
+  function textColor(ms) {
+    if (ms == null || ms <= 0) return '#484f58';
+    const t = Math.max(0, Math.min(1, (Math.log10(ms) - logMin) / (logMax - logMin || 1)));
+    return t > 0.6 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.85)';
+  }
+
+  function fmt(ms) {
+    if (ms == null) return '-';
+    if (ms >= 1000) return (ms / 1000).toFixed(2) + 's';
+    return ms.toFixed(1) + 'ms';
+  }
+
+  // ── Build table ───────────────────────────────────────────────────────
+  const table = document.getElementById('heatmap');
+  let html = `<thead><tr>
+    <th class="query-col">Query</th>
+    <th>pgfusion</th>
+    <th>PostgreSQL</th>
+    <th class="ratio-col">PG / pgf</th>
+  </tr></thead><tbody>`;
+
+  for (const q of queries) {
+    const pfMs = q.pgfusion_ms;
+    const pgMs = q.postgres_ms;
+    const pfOk = q.pgfusion_status === 'OK' && pfMs != null;
+    const pgOk = q.postgres_status === 'OK' && pgMs != null;
+
+    // Ratio
+    let ratioHtml = '<span class="ratio-na">-</span>';
+    if (pfOk && pgOk && pfMs > 0) {
+      const ratio = pgMs / pfMs;
+      const cls = ratio > 1 ? 'ratio-slower' : 'ratio-faster';
+      ratioHtml = `<span class="${cls}">${ratio.toFixed(2)}x</span>`;
+    }
+
+    html += `<tr>`;
+    html += `<td class="query-name">${q.name}</td>`;
+
+    // pgfusion cell
+    if (pfOk) {
+      html += `<td><div class="cell" style="background:${timeToColor(pfMs)};color:${textColor(pfMs)}" data-query="${q.name}" data-engine="pgfusion" data-ms="${pfMs}">${fmt(pfMs)}</div></td>`;
+    } else {
+      html += `<td><div class="cell error" data-query="${q.name}" data-engine="pgfusion" data-ms="">ERROR</div></td>`;
+    }
+
+    // postgres cell
+    if (pgOk) {
+      html += `<td><div class="cell" style="background:${timeToColor(pgMs)};color:${textColor(pgMs)}" data-query="${q.name}" data-engine="PostgreSQL" data-ms="${pgMs}">${fmt(pgMs)}</div></td>`;
+    } else {
+      html += `<td><div class="cell error" data-query="${q.name}" data-engine="PostgreSQL" data-ms="">ERROR</div></td>`;
+    }
+
+    html += `<td class="ratio-cell">${ratioHtml}</td>`;
+    html += `</tr>`;
+  }
+
+  html += `</tbody>`;
+  table.innerHTML = html;
+
+  // ── Tooltip ───────────────────────────────────────────────────────────
+  const tooltip = document.getElementById('tooltip');
+
+  table.addEventListener('mouseover', e => {
+    const cell = e.target.closest('.cell');
+    if (!cell) { tooltip.style.display = 'none'; return; }
+    const query = cell.dataset.query;
+    const engine = cell.dataset.engine;
+    const ms = cell.dataset.ms;
+
+    tooltip.querySelector('.tt-query').textContent = query;
+    tooltip.querySelector('.tt-engine').textContent = engine;
+    tooltip.querySelector('.tt-time').textContent = ms ? `${parseFloat(ms).toFixed(3)} ms` : 'ERROR';
+    tooltip.style.display = 'block';
+  });
+
+  table.addEventListener('mousemove', e => {
+    tooltip.style.left = (e.clientX + 12) + 'px';
+    tooltip.style.top = (e.clientY + 12) + 'px';
+  });
+
+  table.addEventListener('mouseout', e => {
+    if (!e.target.closest('.cell')) tooltip.style.display = 'none';
+  });
+
+})();
+</script>
+</body>
+</html>
