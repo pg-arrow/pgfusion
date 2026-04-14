@@ -33,7 +33,7 @@ pub struct CustomDataSource {
 }
 
 #[derive(Debug)]
-struct CustomExec {
+struct PgTableExec {
     db_id: Oid,
     table_metadata: PgClass,
     schema: PgSchema,
@@ -42,15 +42,15 @@ struct CustomExec {
     metrics: ExecutionPlanMetricsSet,
 }
 
-impl DisplayAs for CustomExec {
+impl DisplayAs for PgTableExec {
     fn fmt_as(&self, _t: DisplayFormatType, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "CustomExec")
+        write!(f, "PgTableExec")
     }
 }
 
-impl ExecutionPlan for CustomExec {
+impl ExecutionPlan for PgTableExec {
     fn name(&self) -> &str {
-        "CustomExec"
+        "PgTableExec"
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -114,14 +114,14 @@ impl ExecutionPlan for CustomExec {
             })
         });
 
-        Ok(Box::pin(SampleStream {
+        Ok(Box::pin(PgRecordBatchStream {
             inner: Box::pin(inner),
             arrow_schema,
         }))
     }
 }
 
-impl CustomExec {
+impl PgTableExec {
     fn new(
         projections: Option<&Vec<usize>>,
         schema: SchemaRef,
@@ -153,12 +153,12 @@ impl CustomExec {
 }
 
 /// Wraps a `futures::Stream` with a schema to implement DataFusion's `RecordBatchStream`.
-struct SampleStream {
+struct PgRecordBatchStream {
     inner: Pin<Box<dyn Stream<Item = Result<RecordBatch>> + Send>>,
     arrow_schema: SchemaRef,
 }
 
-impl Stream for SampleStream {
+impl Stream for PgRecordBatchStream {
     type Item = Result<RecordBatch>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -166,7 +166,7 @@ impl Stream for SampleStream {
     }
 }
 
-impl RecordBatchStream for SampleStream {
+impl RecordBatchStream for PgRecordBatchStream {
     fn schema(&self) -> SchemaRef {
         self.arrow_schema.clone()
     }
@@ -178,7 +178,7 @@ impl CustomDataSource {
         projections: Option<&Vec<usize>>,
         schema: SchemaRef,
     ) -> Result<Arc<dyn ExecutionPlan>> {
-        Ok(Arc::new(CustomExec::new(
+        Ok(Arc::new(PgTableExec::new(
             projections,
             schema,
             self.pg_schema.clone(),
