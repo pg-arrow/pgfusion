@@ -4,7 +4,6 @@ use clap::Parser;
 use datafusion::common::DataFusionError;
 use datafusion::execution::context::SessionContext;
 use pg_arrow::file::{error::PgError, set_data_dir};
-use pgfusion_lib::create_session;
 use rustyline::DefaultEditor;
 use tokio_util::sync::CancellationToken;
 
@@ -90,21 +89,15 @@ async fn execute_query(ctx: &SessionContext, sql: &str) -> Result<(), DataFusion
     result
 }
 
-use mimalloc::MiMalloc;
-
-#[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
-
-#[tokio::main]
-async fn main() -> Result<(), PgError> {
-    env_logger::init();
-
+/// Entry point for the CLI. Parses arguments and runs the appropriate mode
+/// (single command, file execution, or interactive REPL).
+pub async fn run() -> Result<(), PgError> {
     let cli = Cli::parse();
 
     set_data_dir(cli.data_dir);
     let db_id = cli.db_id;
 
-    let ctx = create_session(db_id).expect("failed to create session");
+    let ctx = crate::create_session(db_id).expect("failed to create session");
 
     if let Some(command) = cli.command {
         let start = Instant::now();

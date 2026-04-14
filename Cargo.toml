@@ -32,7 +32,11 @@ path = "src/lib.rs"
 
 [[bin]]
 name = "pgfusion_cli"
-path = "src/main.rs"
+path = "src/cli/main.rs"
+
+[[bin]]
+name = "pgfusion_server"
+path = "src/server/main.rs"
 
 [dev-dependencies]
 criterion = { version = "0.6", features = ["async_tokio"] }
