@@ -50,7 +50,7 @@
   table {
     border-collapse: collapse;
     width: 100%;
-    max-width: 900px;
+    max-width: 600px;
   }
   th {
     font-size: 12px;
@@ -61,7 +61,12 @@
     text-align: center;
     color: #8b949e;
     border-bottom: 2px solid #30363d;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
   }
+  th:hover { color: #f0f6fc; }
+  th .sort-arrow { font-size: 10px; margin-left: 4px; }
   th.query-col { text-align: left; width: 70px; }
   th.ratio-col { width: 90px; }
 
@@ -83,14 +88,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 32px;
-    margin: 1px;
-    border-radius: 4px;
+    height: 28px;
+    margin: 0;
+    border-radius: 0;
     font-size: 11px;
     font-weight: 500;
     cursor: default;
     transition: opacity 0.15s;
-    min-width: 100px;
+    min-width: 70px;
   }
   .cell:hover { opacity: 0.8; }
   .cell.error {
@@ -119,7 +124,7 @@
     width: 200px;
     height: 14px;
     border-radius: 3px;
-    background: linear-gradient(to right, #26a641, #e8860c, #f85149);
+    background: linear-gradient(to right, #2ea043, #74c337, #d2b72f, #e8860c, #f85149);
   }
   .legend-label { white-space: nowrap; }
 
@@ -138,6 +143,9 @@
     margin-right: 4px;
   }
 
+  td.query-name { cursor: pointer; }
+  td.query-name:hover { color: #58a6ff; }
+
   .tooltip {
     display: none;
     position: fixed;
@@ -153,6 +161,64 @@
   .tooltip .tt-query { font-weight: 600; color: #f0f6fc; margin-bottom: 4px; }
   .tooltip .tt-engine { color: #8b949e; }
   .tooltip .tt-time { font-weight: 600; }
+
+  .sql-popover {
+    display: none;
+    position: fixed;
+    background: #1c2128;
+    border: 1px solid #444c56;
+    border-radius: 8px;
+    padding: 0;
+    font-size: 12px;
+    z-index: 200;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    max-width: 620px;
+    min-width: 300px;
+  }
+  .sql-popover-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid #30363d;
+  }
+  .sql-popover-header .sql-label {
+    font-weight: 600;
+    color: #f0f6fc;
+    font-size: 12px;
+  }
+  .sql-popover-header .sql-copy-btn {
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    color: #c9d1d9;
+    font-size: 11px;
+    padding: 3px 10px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .sql-popover-header .sql-copy-btn:hover {
+    background: #30363d;
+    border-color: #484f58;
+  }
+  .sql-popover-header .sql-copy-btn.copied {
+    color: #3fb950;
+    border-color: #3fb950;
+  }
+  .sql-popover-body {
+    padding: 10px 12px;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  .sql-popover-body pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: #e6edf3;
+    font-size: 12px;
+    line-height: 1.5;
+  }
 </style>
 </head>
 <body>
@@ -181,15 +247,86 @@
   <div class="tt-time"></div>
 </div>
 
+<div class="sql-popover" id="sql-popover">
+  <div class="sql-popover-header">
+    <span class="sql-label"></span>
+    <button class="sql-copy-btn">Copy</button>
+  </div>
+  <div class="sql-popover-body"><pre></pre></div>
+</div>
+
+<!-- RESULTS_DATA_START -->
+<script id="embedded-data" type="application/json">
+{
+  "timestamp": "2026-04-11T20:52:47Z",
+  "runs_per_query": 3,
+  "pg_version": "pg18",
+  "pg_parallel_workers": 10,
+  "pg_shared_buffers": "8GB",
+  "queries": [
+    {"name":"Q0","sql":"SELECT COUNT(*) FROM hits;","pgfusion_ms":14274.791,"pgfusion_status":"OK","postgres_ms":15323.533,"postgres_status":"OK"},
+    {"name":"Q1","sql":"SELECT COUNT(*) FROM hits WHERE AdvEngineID <> 0;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":14048.289,"postgres_status":"OK"},
+    {"name":"Q2","sql":"SELECT SUM(AdvEngineID), COUNT(*), AVG(ResolutionWidth) FROM hits;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":14145.313,"postgres_status":"OK"},
+    {"name":"Q3","sql":"SELECT AVG(UserID) FROM hits;","pgfusion_ms":15483.009,"pgfusion_status":"OK","postgres_ms":14455.859,"postgres_status":"OK"},
+    {"name":"Q4","sql":"SELECT COUNT(DISTINCT UserID) FROM hits;","pgfusion_ms":16201.844,"pgfusion_status":"OK","postgres_ms":20783.452,"postgres_status":"OK"},
+    {"name":"Q5","sql":"SELECT COUNT(DISTINCT SearchPhrase) FROM hits;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":286646.943,"postgres_status":"OK"},
+    {"name":"Q6","sql":"SELECT MIN(EventDate), MAX(EventDate) FROM hits;","pgfusion_ms":14546.618,"pgfusion_status":"OK","postgres_ms":14469.151,"postgres_status":"OK"},
+    {"name":"Q7","sql":"SELECT AdvEngineID, COUNT(*) FROM hits WHERE AdvEngineID <> 0 GROUP BY AdvEngineID ORDER BY COUNT(*) DESC;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":14055.801,"postgres_status":"OK"},
+    {"name":"Q8","sql":"SELECT RegionID, COUNT(DISTINCT UserID) AS u FROM hits GROUP BY RegionID ORDER BY u DESC LIMIT 10;","pgfusion_ms":15492.912,"pgfusion_status":"OK","postgres_ms":28913.071,"postgres_status":"OK"},
+    {"name":"Q9","sql":"SELECT RegionID, SUM(AdvEngineID), COUNT(*) AS c, AVG(ResolutionWidth), COUNT(DISTINCT UserID) FROM hits GROUP BY RegionID ORDER BY c DESC LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":31404.209,"postgres_status":"OK"},
+    {"name":"Q10","sql":"SELECT MobilePhoneModel, COUNT(DISTINCT UserID) AS u FROM hits WHERE MobilePhoneModel <> '' GROUP BY MobilePhoneModel ORDER BY u DESC LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":14731.140,"postgres_status":"OK"},
+    {"name":"Q11","sql":"SELECT MobilePhone, MobilePhoneModel, COUNT(DISTINCT UserID) AS u FROM hits WHERE MobilePhoneModel <> '' GROUP BY MobilePhone, MobilePhoneModel ORDER BY u DESC LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":15228.087,"postgres_status":"OK"},
+    {"name":"Q12","sql":"SELECT SearchPhrase, COUNT(*) AS c FROM hits WHERE SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":216455.496,"postgres_status":"OK"},
+    {"name":"Q13","sql":"SELECT SearchPhrase, COUNT(DISTINCT UserID) AS u FROM hits WHERE SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY u DESC LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":265883.998,"postgres_status":"OK"},
+    {"name":"Q14","sql":"SELECT SearchEngineID, SearchPhrase, COUNT(*) AS c FROM hits WHERE SearchPhrase <> '' GROUP BY SearchEngineID, SearchPhrase ORDER BY c DESC LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":217144.756,"postgres_status":"OK"},
+    {"name":"Q15","sql":"SELECT UserID, COUNT(*) FROM hits GROUP BY UserID ORDER BY COUNT(*) DESC LIMIT 10;","pgfusion_ms":16388.043,"pgfusion_status":"OK","postgres_ms":18730.668,"postgres_status":"OK"},
+    {"name":"Q16","sql":"SELECT UserID, SearchPhrase, COUNT(*) FROM hits GROUP BY UserID, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":34263.862,"postgres_status":"OK"},
+    {"name":"Q17","sql":"SELECT UserID, SearchPhrase, COUNT(*) FROM hits GROUP BY UserID, SearchPhrase LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":18189.145,"postgres_status":"OK"},
+    {"name":"Q18","sql":"SELECT UserID, extract(minute FROM EventTime) AS m, SearchPhrase, COUNT(*) FROM hits GROUP BY UserID, m, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":42289.518,"postgres_status":"OK"},
+    {"name":"Q19","sql":"SELECT UserID FROM hits WHERE UserID = 435090932899640449;","pgfusion_ms":15029.851,"pgfusion_status":"OK","postgres_ms":14124.263,"postgres_status":"OK"},
+    {"name":"Q20","sql":"SELECT COUNT(*) FROM hits WHERE URL LIKE '%google%';","pgfusion_ms":15908.512,"pgfusion_status":"OK","postgres_ms":14090.294,"postgres_status":"OK"},
+    {"name":"Q21","sql":"SELECT SearchPhrase, MIN(URL), COUNT(*) AS c FROM hits WHERE URL LIKE '%google%' AND SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":14042.961,"postgres_status":"OK"},
+    {"name":"Q22","sql":"SELECT SearchPhrase, MIN(URL), MIN(Title), COUNT(*) AS c, COUNT(DISTINCT UserID) FROM hits WHERE Title LIKE '%Google%' AND URL NOT LIKE '%.telecomag.%' AND SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":14802.903,"postgres_status":"OK"},
+    {"name":"Q23","sql":"SELECT * FROM hits WHERE URL LIKE '%google%' ORDER BY EventTime LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":14166.884,"postgres_status":"OK"},
+    {"name":"Q24","sql":"SELECT SearchPhrase FROM hits WHERE SearchPhrase <> '' ORDER BY EventTime LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":13721.230,"postgres_status":"OK"},
+    {"name":"Q25","sql":"SELECT SearchPhrase FROM hits WHERE SearchPhrase <> '' ORDER BY SearchPhrase LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":14767.798,"postgres_status":"OK"},
+    {"name":"Q26","sql":"SELECT SearchPhrase FROM hits WHERE SearchPhrase <> '' ORDER BY EventTime, SearchPhrase LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":14062.457,"postgres_status":"OK"},
+    {"name":"Q27","sql":"SELECT CounterID, AVG(length(URL)) AS l, COUNT(*) AS c FROM hits WHERE URL <> '' GROUP BY CounterID HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;","pgfusion_ms":17014.431,"pgfusion_status":"OK","postgres_ms":14588.006,"postgres_status":"OK"},
+    {"name":"Q28","sql":"SELECT REGEXP_REPLACE(Referer, '^https?://(?:www\\.)?([^/]+)(?:/.*)?$', '\\1') AS key, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY key HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;","pgfusion_ms":24375.269,"pgfusion_status":"OK","postgres_ms":72422.215,"postgres_status":"OK"},
+    {"name":"Q29","sql":"SELECT SUM(ResolutionWidth), SUM(ResolutionWidth + 1), SUM(ResolutionWidth + 2), SUM(ResolutionWidth + 3), SUM(ResolutionWidth + 4), SUM(ResolutionWidth + 5), SUM(ResolutionWidth + 6), SUM(ResolutionWidth + 7), SUM(ResolutionWidth + 8), SUM(ResolutionWidth + 9), SUM(ResolutionWidth + 10), SUM(ResolutionWidth + 11), SUM(ResolutionWidth + 12), SUM(ResolutionWidth + 13), SUM(ResolutionWidth + 14), SUM(ResolutionWidth + 15), SUM(ResolutionWidth + 16), SUM(ResolutionWidth + 17), SUM(ResolutionWidth + 18), SUM(ResolutionWidth + 19), SUM(ResolutionWidth + 20), SUM(ResolutionWidth + 21), SUM(ResolutionWidth + 22), SUM(ResolutionWidth + 23), SUM(ResolutionWidth + 24), SUM(ResolutionWidth + 25), SUM(ResolutionWidth + 26), SUM(ResolutionWidth + 27), SUM(ResolutionWidth + 28), SUM(ResolutionWidth + 29), SUM(ResolutionWidth + 30), SUM(ResolutionWidth + 31), SUM(ResolutionWidth + 32), SUM(ResolutionWidth + 33), SUM(ResolutionWidth + 34), SUM(ResolutionWidth + 35), SUM(ResolutionWidth + 36), SUM(ResolutionWidth + 37), SUM(ResolutionWidth + 38), SUM(ResolutionWidth + 39), SUM(ResolutionWidth + 40), SUM(ResolutionWidth + 41), SUM(ResolutionWidth + 42), SUM(ResolutionWidth + 43), SUM(ResolutionWidth + 44), SUM(ResolutionWidth + 45), SUM(ResolutionWidth + 46), SUM(ResolutionWidth + 47), SUM(ResolutionWidth + 48), SUM(ResolutionWidth + 49), SUM(ResolutionWidth + 50), SUM(ResolutionWidth + 51), SUM(ResolutionWidth + 52), SUM(ResolutionWidth + 53), SUM(ResolutionWidth + 54), SUM(ResolutionWidth + 55), SUM(ResolutionWidth + 56), SUM(ResolutionWidth + 57), SUM(ResolutionWidth + 58), SUM(ResolutionWidth + 59), SUM(ResolutionWidth + 60), SUM(ResolutionWidth + 61), SUM(ResolutionWidth + 62), SUM(ResolutionWidth + 63), SUM(ResolutionWidth + 64), SUM(ResolutionWidth + 65), SUM(ResolutionWidth + 66), SUM(ResolutionWidth + 67), SUM(ResolutionWidth + 68), SUM(ResolutionWidth + 69), SUM(ResolutionWidth + 70), SUM(ResolutionWidth + 71), SUM(ResolutionWidth + 72), SUM(ResolutionWidth + 73), SUM(ResolutionWidth + 74), SUM(ResolutionWidth + 75), SUM(ResolutionWidth + 76), SUM(ResolutionWidth + 77), SUM(ResolutionWidth + 78), SUM(ResolutionWidth + 79), SUM(ResolutionWidth + 80), SUM(ResolutionWidth + 81), SUM(ResolutionWidth + 82), SUM(ResolutionWidth + 83), SUM(ResolutionWidth + 84), SUM(ResolutionWidth + 85), SUM(ResolutionWidth + 86), SUM(ResolutionWidth + 87), SUM(ResolutionWidth + 88), SUM(ResolutionWidth + 89) FROM hits;","pgfusion_ms":206441.363,"pgfusion_status":"OK","postgres_ms":17496.899,"postgres_status":"OK"},
+    {"name":"Q30","sql":"SELECT SearchEngineID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY SearchEngineID, ClientIP ORDER BY c DESC LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":17518.387,"postgres_status":"OK"},
+    {"name":"Q31","sql":"SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":18061.739,"postgres_status":"OK"},
+    {"name":"Q32","sql":"SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;","pgfusion_ms":66505.652,"pgfusion_status":"OK","postgres_ms":48268.147,"postgres_status":"OK"},
+    {"name":"Q33","sql":"SELECT URL, COUNT(*) AS c FROM hits GROUP BY URL ORDER BY c DESC LIMIT 10;","pgfusion_ms":19864.220,"pgfusion_status":"OK","postgres_ms":210701.059,"postgres_status":"OK"},
+    {"name":"Q34","sql":"SELECT 1, URL, COUNT(*) AS c FROM hits GROUP BY 1, URL ORDER BY c DESC LIMIT 10;","pgfusion_ms":20280.336,"pgfusion_status":"OK","postgres_ms":211046.022,"postgres_status":"OK"},
+    {"name":"Q35","sql":"SELECT ClientIP, ClientIP - 1, ClientIP - 2, ClientIP - 3, COUNT(*) AS c FROM hits GROUP BY ClientIP, ClientIP - 1, ClientIP - 2, ClientIP - 3 ORDER BY c DESC LIMIT 10;","pgfusion_ms":17536.129,"pgfusion_status":"OK","postgres_ms":18336.450,"postgres_status":"OK"},
+    {"name":"Q36","sql":"SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND IsRefresh = 0 AND URL <> '' GROUP BY URL ORDER BY PageViews DESC LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":15625.842,"postgres_status":"OK"},
+    {"name":"Q37","sql":"SELECT Title, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND IsRefresh = 0 AND Title <> '' GROUP BY Title ORDER BY PageViews DESC LIMIT 10;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":14486.392,"postgres_status":"OK"},
+    {"name":"Q38","sql":"SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND IsLink <> 0 AND IsDownload = 0 GROUP BY URL ORDER BY PageViews DESC LIMIT 1000;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":13744.186,"postgres_status":"OK"},
+    {"name":"Q39","sql":"SELECT TraficSourceID, SearchEngineID, AdvEngineID, CASE WHEN (SearchEngineID = 0 AND AdvEngineID = 0) THEN Referer ELSE '' END AS Src, URL AS Dst, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 GROUP BY TraficSourceID, SearchEngineID, AdvEngineID, Src, Dst ORDER BY PageViews DESC LIMIT 1000;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":17248.056,"postgres_status":"OK"},
+    {"name":"Q40","sql":"SELECT URLHash, EventDate, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND TraficSourceID IN (-1, 6) AND RefererHash = 3594120000172545465 GROUP BY URLHash, EventDate ORDER BY PageViews DESC LIMIT 100;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":13528.744,"postgres_status":"OK"},
+    {"name":"Q41","sql":"SELECT WindowClientWidth, WindowClientHeight, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND DontCountHits = 0 AND URLHash = 2868770270353813622 GROUP BY WindowClientWidth, WindowClientHeight ORDER BY PageViews DESC LIMIT 10000;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":14081.181,"postgres_status":"OK"},
+    {"name":"Q42","sql":"SELECT DATE_TRUNC('minute', EventTime) AS M, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND IsRefresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', EventTime) ORDER BY DATE_TRUNC('minute', EventTime) LIMIT 1000;","pgfusion_ms":null,"pgfusion_status":"ERROR","postgres_ms":13801.964,"postgres_status":"OK"}
+  ]
+}
+</script>
+<!-- RESULTS_DATA_END -->
 <script>
 (async function() {
   let data;
-  try {
-    const resp = await fetch('./results.json');
-    data = await resp.json();
-  } catch(e) {
-    document.getElementById('meta').textContent = 'Failed to load results.json. Run the benchmark first, then serve this directory (python3 -m http.server).';
-    return;
+  // Prefer embedded data (injected by run.sh), fall back to fetch
+  const embedded = document.getElementById('embedded-data').textContent.trim();
+  if (embedded) {
+    try { data = JSON.parse(embedded); } catch(e) { /* fall through to fetch */ }
+  }
+  if (!data) {
+    try {
+      const resp = await fetch('./results.json');
+      data = await resp.json();
+    } catch(e) {
+      document.getElementById('meta').textContent = 'No results found. Run the benchmark first (./run.sh).';
+      return;
+    }
   }
 
   const queries = data.queries;
@@ -219,36 +356,44 @@
     <div class="summary-card"><div class="label">Both passed</div><div class="value good">${bothPass}</div></div>
   `;
 
-  // ── Color scale (log) ─────────────────────────────────────────────────
-  const allTimes = queries.flatMap(q => [q.pgfusion_ms, q.postgres_ms]).filter(t => t != null && t > 0);
-  const minTime = Math.max(Math.min(...allTimes), 1);
-  const maxTime = Math.max(...allTimes);
-  const logMin = Math.log10(minTime);
-  const logMax = Math.log10(maxTime);
+  // ── Color scale (per-query relative) ───────────────────────────────────
+  // Green = faster engine, red = slower engine within each row.
+  // t=0 (fastest) -> green, t=1 (slowest) -> red. Equal -> yellow.
 
-  function timeToColor(ms) {
-    if (ms == null || ms <= 0) return null;
-    const t = Math.max(0, Math.min(1, (Math.log10(ms) - logMin) / (logMax - logMin || 1)));
-    // green -> orange -> red (3-stop interpolation)
-    let r, g, b;
-    if (t < 0.5) {
-      const s = t * 2; // 0..1 within first half
-      r = Math.round(38 + (232 - 38) * s);   // #26 -> #e8
-      g = Math.round(166 + (134 - 166) * s);  // #a6 -> #86
-      b = Math.round(65 + (12 - 65) * s);     // #41 -> #0c
-    } else {
-      const s = (t - 0.5) * 2; // 0..1 within second half
-      r = Math.round(232 + (248 - 232) * s);  // #e8 -> #f8
-      g = Math.round(134 + (81 - 134) * s);   // #86 -> #51
-      b = Math.round(12 + (73 - 12) * s);     // #0c -> #49
-    }
+  // 3-stop ramp: green -> yellow -> red
+  const stops = [
+    [0.0, 46, 160, 67],    // #2ea043 green
+    [0.5, 210, 183, 47],   // #d2b72f yellow
+    [1.0, 248, 81, 73],    // #f85149 red
+  ];
+
+  function ratioToColor(t) {
+    let i = 0;
+    while (i < stops.length - 2 && stops[i + 1][0] < t) i++;
+    const [t0, r0, g0, b0] = stops[i];
+    const [t1, r1, g1, b1] = stops[i + 1];
+    const s = (t - t0) / (t1 - t0 || 1);
+    const r = Math.round(r0 + (r1 - r0) * s);
+    const g = Math.round(g0 + (g1 - g0) * s);
+    const b = Math.round(b0 + (b1 - b0) * s);
     return `rgb(${r}, ${g}, ${b})`;
   }
 
-  function textColor(ms) {
-    if (ms == null || ms <= 0) return '#484f58';
-    const t = Math.max(0, Math.min(1, (Math.log10(ms) - logMin) / (logMax - logMin || 1)));
-    return t > 0.6 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.85)';
+  // Returns 0..1 where 0 = faster (green), 1 = slower (red)
+  // The faster side always gets pure green (0), the slower side gets a
+  // redness proportional to how much slower it is.
+  function cellColor(myMs, otherMs) {
+    if (myMs == null || myMs <= 0) return null;
+    if (otherMs == null || otherMs <= 0) return ratioToColor(0); // other errored, I'm the winner
+    if (myMs <= otherMs) return ratioToColor(0); // I'm faster or equal -> green
+    const ratio = myMs / otherMs; // >1, how much slower am I
+    // Map ratio 1..inf to 0..1: ratio=1 -> 0, ratio=2 -> 0.5, ratio=4+ -> ~1
+    const t = Math.min(1, Math.log2(ratio));
+    return ratioToColor(t);
+  }
+
+  function textColor() {
+    return 'rgba(255,255,255,0.95)';
   }
 
   function fmt(ms) {
@@ -259,52 +404,96 @@
 
   // ── Build table ───────────────────────────────────────────────────────
   const table = document.getElementById('heatmap');
-  let html = `<thead><tr>
-    <th class="query-col">Query</th>
-    <th>pgfusion</th>
-    <th>PostgreSQL</th>
-    <th class="ratio-col">PG / pgf</th>
-  </tr></thead><tbody>`;
+  let sortCol = null; // 'query' | 'pgfusion' | 'postgres' | 'ratio'
+  let sortAsc = true;
 
-  for (const q of queries) {
-    const pfMs = q.pgfusion_ms;
-    const pgMs = q.postgres_ms;
+  function sortKey(q, col) {
+    const pfMs = q.pgfusion_ms, pgMs = q.postgres_ms;
     const pfOk = q.pgfusion_status === 'OK' && pfMs != null;
     const pgOk = q.postgres_status === 'OK' && pgMs != null;
-
-    // Ratio
-    let ratioHtml = '<span class="ratio-na">-</span>';
-    if (pfOk && pgOk && pfMs > 0) {
-      const ratio = pgMs / pfMs;
-      const cls = ratio > 1 ? 'ratio-slower' : 'ratio-faster';
-      ratioHtml = `<span class="${cls}">${ratio.toFixed(2)}x</span>`;
-    }
-
-    html += `<tr>`;
-    html += `<td class="query-name">${q.name}</td>`;
-
-    // pgfusion cell
-    if (pfOk) {
-      html += `<td><div class="cell" style="background:${timeToColor(pfMs)};color:${textColor(pfMs)}" data-query="${q.name}" data-engine="pgfusion" data-ms="${pfMs}">${fmt(pfMs)}</div></td>`;
-    } else {
-      html += `<td><div class="cell error" data-query="${q.name}" data-engine="pgfusion" data-ms="">ERROR</div></td>`;
-    }
-
-    // postgres cell
-    if (pgOk) {
-      html += `<td><div class="cell" style="background:${timeToColor(pgMs)};color:${textColor(pgMs)}" data-query="${q.name}" data-engine="PostgreSQL" data-ms="${pgMs}">${fmt(pgMs)}</div></td>`;
-    } else {
-      html += `<td><div class="cell error" data-query="${q.name}" data-engine="PostgreSQL" data-ms="">ERROR</div></td>`;
-    }
-
-    html += `<td class="ratio-cell">${ratioHtml}</td>`;
-    html += `</tr>`;
+    if (col === 'query') return parseInt(q.name.slice(1)); // numeric part of Q0, Q1...
+    if (col === 'pgfusion') return pfOk ? pfMs : Infinity;
+    if (col === 'postgres') return pgOk ? pgMs : Infinity;
+    if (col === 'ratio') return (pfOk && pgOk && pfMs > 0) ? pgMs / pfMs : -Infinity;
+    return 0;
   }
 
-  html += `</tbody>`;
-  table.innerHTML = html;
+  function renderTable() {
+    const sorted = [...queries];
+    if (sortCol) {
+      sorted.sort((a, b) => {
+        const ka = sortKey(a, sortCol), kb = sortKey(b, sortCol);
+        return sortAsc ? ka - kb : kb - ka;
+      });
+    }
 
-  // ── Tooltip ───────────────────────────────────────────────────────────
+    const arrow = (col) => {
+      if (sortCol !== col) return '';
+      return `<span class="sort-arrow">${sortAsc ? '\u25B2' : '\u25BC'}</span>`;
+    };
+
+    let html = `<thead><tr>
+      <th class="query-col" data-sort="query">Query${arrow('query')}</th>
+      <th data-sort="pgfusion">pgfusion${arrow('pgfusion')}</th>
+      <th data-sort="postgres">PostgreSQL${arrow('postgres')}</th>
+      <th class="ratio-col" data-sort="ratio">PG / pgf${arrow('ratio')}</th>
+    </tr></thead><tbody>`;
+
+    for (const q of sorted) {
+      const pfMs = q.pgfusion_ms;
+      const pgMs = q.postgres_ms;
+      const pfOk = q.pgfusion_status === 'OK' && pfMs != null;
+      const pgOk = q.postgres_status === 'OK' && pgMs != null;
+
+      let ratioHtml = '<span class="ratio-na">-</span>';
+      if (pfOk && pgOk && pfMs > 0) {
+        const ratio = pgMs / pfMs;
+        const cls = ratio > 1 ? 'ratio-slower' : 'ratio-faster';
+        ratioHtml = `<span class="${cls}">${ratio.toFixed(2)}x</span>`;
+      }
+
+      html += `<tr>`;
+      html += `<td class="query-name" data-query="${q.name}">${q.name}</td>`;
+
+      if (pfOk) {
+        html += `<td><div class="cell" style="background:${cellColor(pfMs, pgMs)};color:${textColor()}" data-query="${q.name}" data-engine="pgfusion" data-ms="${pfMs}">${fmt(pfMs)}</div></td>`;
+      } else {
+        html += `<td><div class="cell error" data-query="${q.name}" data-engine="pgfusion" data-ms="">ERROR</div></td>`;
+      }
+
+      if (pgOk) {
+        html += `<td><div class="cell" style="background:${cellColor(pgMs, pfMs)};color:${textColor()}" data-query="${q.name}" data-engine="PostgreSQL" data-ms="${pgMs}">${fmt(pgMs)}</div></td>`;
+      } else {
+        html += `<td><div class="cell error" data-query="${q.name}" data-engine="PostgreSQL" data-ms="">ERROR</div></td>`;
+      }
+
+      html += `<td class="ratio-cell">${ratioHtml}</td>`;
+      html += `</tr>`;
+    }
+
+    html += `</tbody>`;
+    table.innerHTML = html;
+  }
+
+  renderTable();
+
+  // ── Sort on header click ──────────────────────────────────────────────
+  table.addEventListener('click', e => {
+    const th = e.target.closest('th[data-sort]');
+    if (!th) return;
+    const col = th.dataset.sort;
+    if (sortCol === col) { sortAsc = !sortAsc; }
+    else { sortCol = col; sortAsc = true; }
+    renderTable();
+  });
+
+  // ── SQL lookup ─────────────────────────────────────────────────────────
+  const sqlMap = {};
+  for (const q of queries) {
+    if (q.sql) sqlMap[q.name] = q.sql;
+  }
+
+  // ── Tooltip (time cells) ──────────────────────────────────────────────
   const tooltip = document.getElementById('tooltip');
 
   table.addEventListener('mouseover', e => {
@@ -327,6 +516,81 @@
 
   table.addEventListener('mouseout', e => {
     if (!e.target.closest('.cell')) tooltip.style.display = 'none';
+  });
+
+  // ── SQL popover (query name cells) ────────────────────────────────────
+  const popover = document.getElementById('sql-popover');
+  const popLabel = popover.querySelector('.sql-label');
+  const popPre = popover.querySelector('pre');
+  const popCopyBtn = popover.querySelector('.sql-copy-btn');
+  let popoverQuery = null;
+  let hideTimeout = null;
+
+  function showPopover(td) {
+    const qname = td.dataset.query;
+    const sql = sqlMap[qname];
+    if (!sql) return;
+
+    popoverQuery = qname;
+    popLabel.textContent = qname;
+    popPre.textContent = sql;
+    popCopyBtn.textContent = 'Copy';
+    popCopyBtn.classList.remove('copied');
+
+    // Position to the right of the query name cell
+    const rect = td.getBoundingClientRect();
+    popover.style.display = 'block';
+    const popRect = popover.getBoundingClientRect();
+    let left = rect.right + 8;
+    let top = rect.top;
+    // Keep within viewport
+    if (left + popRect.width > window.innerWidth - 12) {
+      left = rect.left - popRect.width - 8;
+    }
+    if (top + popRect.height > window.innerHeight - 12) {
+      top = window.innerHeight - popRect.height - 12;
+    }
+    popover.style.left = left + 'px';
+    popover.style.top = Math.max(12, top) + 'px';
+  }
+
+  function scheduleHide() {
+    hideTimeout = setTimeout(() => {
+      popover.style.display = 'none';
+      popoverQuery = null;
+    }, 200);
+  }
+
+  function cancelHide() {
+    if (hideTimeout) { clearTimeout(hideTimeout); hideTimeout = null; }
+  }
+
+  table.addEventListener('mouseover', e => {
+    const td = e.target.closest('td.query-name');
+    if (td) {
+      cancelHide();
+      showPopover(td);
+    }
+  });
+
+  table.addEventListener('mouseout', e => {
+    const td = e.target.closest('td.query-name');
+    if (td) scheduleHide();
+  });
+
+  popover.addEventListener('mouseenter', cancelHide);
+  popover.addEventListener('mouseleave', scheduleHide);
+
+  popCopyBtn.addEventListener('click', () => {
+    const sql = popPre.textContent;
+    navigator.clipboard.writeText(sql).then(() => {
+      popCopyBtn.textContent = 'Copied!';
+      popCopyBtn.classList.add('copied');
+      setTimeout(() => {
+        popCopyBtn.textContent = 'Copy';
+        popCopyBtn.classList.remove('copied');
+      }, 1500);
+    });
   });
 
 })();

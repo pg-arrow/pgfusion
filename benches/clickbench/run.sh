@@ -204,9 +204,11 @@ for i in "${!QUERIES[@]}"; do
     # ── JSON accumulator ─────────────────────────────────────────────────────
     pf_json="${pf_best:-null}"
     pg_json="${pg_best:-null}"
+    # JSON-escape the query (handle backslashes and double quotes)
+    query_escaped=$(printf '%s' "$query" | sed 's/\\/\\\\/g; s/"/\\"/g')
     [ -n "$JSON_ENTRIES" ] && JSON_ENTRIES="$JSON_ENTRIES,"
     JSON_ENTRIES="$JSON_ENTRIES
-    {\"name\":\"$qname\",\"pgfusion_ms\":$pf_json,\"pgfusion_status\":\"$pf_status\",\"postgres_ms\":$pg_json,\"postgres_status\":\"$pg_status\"}"
+    {\"name\":\"$qname\",\"sql\":\"$query_escaped\",\"pgfusion_ms\":$pf_json,\"pgfusion_status\":\"$pf_status\",\"postgres_ms\":$pg_json,\"postgres_status\":\"$pg_status\"}"
 
     # ── Totals ────────────────────────────────────────────────────────────────
     if [ "$pf_status" = "OK" ] && [ -n "$pf_best" ]; then
@@ -238,6 +240,32 @@ cat > "$RESULTS_JSON" <<EOF
   ]
 }
 EOF
+
+# ── Embed JSON into heatmap.html ─────────────────────────────────────────────
+
+HEATMAP_FILE="$SCRIPT_DIR/heatmap.html"
+if [ -f "$HEATMAP_FILE" ]; then
+    log_info "Embedding results into heatmap.html..."
+    # Build the replacement block
+    EMBED_BLOCK="<!-- RESULTS_DATA_START -->
+<script id=\"embedded-data\" type=\"application/json\">
+$(cat "$RESULTS_JSON")
+</script>
+<!-- RESULTS_DATA_END -->"
+    # Use python to do a reliable multi-line replacement
+    python3 -c "
+import re, sys
+html = open('$HEATMAP_FILE').read()
+replacement = sys.stdin.read()
+html = re.sub(
+    r'<!-- RESULTS_DATA_START -->.*?<!-- RESULTS_DATA_END -->',
+    replacement,
+    html,
+    flags=re.DOTALL
+)
+open('$HEATMAP_FILE', 'w').write(html)
+" <<< "$EMBED_BLOCK"
+fi
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 
