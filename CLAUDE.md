@@ -66,3 +66,7 @@ pgfusion_cli -d /path/to/pgdata -f queries.sql -t
 ```
 
 REPL commands: `\dt` (list tables), `\timing` (toggle), `\?` (help), `\q` (quit)
+
+## Gitignore
+
+The `.gitignore` covers profiling artifacts (`flamegraph.svg`, `perf.data`), `pg-test-config.toml`, benchmark data, and test results. If a file listed in `.gitignore` is still showing up in `git status`, it was likely committed before the rule was added — run `git rm --cached <file>` to untrack it without deleting it from disk.
