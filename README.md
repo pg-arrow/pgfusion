@@ -2,6 +2,8 @@
 
 A SQL query engine that reads PostgreSQL data files directly, bypassing the PostgreSQL server entirely. Built on [Apache DataFusion](https://datafusion.apache.org/) and powered by [pg_arrow](../pg_arrow/) for low-level page parsing and Arrow conversion.
 
+[![asciicast](https://asciinema.org/a/sIhowFJ7Mf8b4Hzk.svg)](https://asciinema.org/a/sIhowFJ7Mf8b4Hzk)
+
 ## How it works
 
 pgfusion points at a PostgreSQL data directory (`PGDATA`), discovers all tables via the system catalog, and registers them as DataFusion table providers. Queries are planned and executed by DataFusion, while the actual page reads and tuple decoding are handled by `pg_arrow`. Each table scan is partitioned across 10 parallel ranges for concurrent reads.
