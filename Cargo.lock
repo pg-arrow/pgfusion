@@ -2531,9 +2531,11 @@ name = "pg_arrow"
 version = "0.1.0"
 dependencies = [
  "arrow",
+ "bytes",
  "derive-where",
  "env_logger",
  "futures",
+ "libc",
  "log",
  "serde",
  "thiserror",

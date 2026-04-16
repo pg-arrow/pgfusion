@@ -7,6 +7,8 @@ use pg_arrow::file::{error::PgError, set_data_dir};
 use rustyline::DefaultEditor;
 use tokio_util::sync::CancellationToken;
 
+use crate::session::SessionOptions;
+
 #[derive(Parser)]
 #[command(name = "pg_fusion_cli")]
 #[command(about = "Query PostgreSQL data files directly using SQL via DataFusion")]
@@ -30,6 +32,40 @@ struct Cli {
     /// Enable query timing
     #[arg(short = 't', long = "timing")]
     timing: bool,
+
+    /// Memory limit for query execution (e.g. 512M, 2G). Default: unlimited.
+    #[arg(long)]
+    memory_limit: Option<String>,
+
+    /// Target rows per RecordBatch (default: 8192)
+    #[arg(long)]
+    batch_size: Option<usize>,
+
+    /// Number of partitions for parallel execution (default: CPU core count)
+    #[arg(long)]
+    target_partitions: Option<usize>,
+
+    /// Disable coalescing of small batches between operators
+    #[arg(long)]
+    no_coalesce: bool,
+}
+
+/// Parse a human-readable memory size string (e.g. "512M", "2G", "1024K") into bytes.
+fn parse_memory_size(s: &str) -> usize {
+    let s = s.trim();
+    let (num, multiplier) = if let Some(n) = s.strip_suffix('G').or_else(|| s.strip_suffix('g')) {
+        (n, 1024 * 1024 * 1024)
+    } else if let Some(n) = s.strip_suffix('M').or_else(|| s.strip_suffix('m')) {
+        (n, 1024 * 1024)
+    } else if let Some(n) = s.strip_suffix('K').or_else(|| s.strip_suffix('k')) {
+        (n, 1024)
+    } else {
+        (s, 1)
+    };
+    num.trim()
+        .parse::<usize>()
+        .unwrap_or_else(|_| panic!("invalid memory size: {s}"))
+        * multiplier
 }
 
 fn format_elapsed(elapsed: Duration) -> String {
@@ -97,7 +133,14 @@ pub async fn run() -> Result<(), PgError> {
     set_data_dir(cli.data_dir);
     let db_id = cli.db_id;
 
-    let ctx = crate::create_session(db_id).expect("failed to create session");
+    let opts = SessionOptions {
+        memory_limit: cli.memory_limit.as_deref().map(parse_memory_size),
+        batch_size: cli.batch_size,
+        target_partitions: cli.target_partitions,
+        coalesce_batches: if cli.no_coalesce { Some(false) } else { None },
+    };
+
+    let ctx = crate::create_session_with_options(db_id, &opts).expect("failed to create session");
 
     if let Some(command) = cli.command {
         let start = Instant::now();

@@ -143,7 +143,7 @@ impl PgTableExec {
             projections: proj.clone(),
             properties: Arc::new(PlanProperties::new(
                 EquivalenceProperties::new(proj.unwrap().0),
-                Partitioning::UnknownPartitioning(10),
+                Partitioning::RoundRobinBatch(10),
                 EmissionType::Incremental,
                 Boundedness::Bounded,
             )),
