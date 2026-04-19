@@ -76,7 +76,10 @@ fn format_elapsed(elapsed: Duration) -> String {
         let mins = (total_secs % 3600) / 60;
         let secs = total_secs % 60;
         let millis = elapsed.subsec_millis();
-        format!("{:.3}ms ({:02}:{:02}:{:02}.{:03})", ms, hrs, mins, secs, millis)
+        format!(
+            "{:.3}ms ({:02}:{:02}:{:02}.{:03})",
+            ms, hrs, mins, secs, millis
+        )
     } else {
         format!("{:.3}ms", ms)
     }

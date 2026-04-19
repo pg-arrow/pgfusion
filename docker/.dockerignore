@@ -1,0 +1,6 @@
+target/
+.git/
+docker/
+benches/
+flamegraph.svg
+**/*.md

@@ -1,0 +1,58 @@
+# Usage:
+#   PGDATA_PATH=/var/lib/postgresql/data docker compose run --rm pgfusion-cli
+#   PGDATA_PATH=/var/lib/postgresql/data docker compose up pgfusion-server
+#
+# Override resource limits via env vars:
+#   PGFUSION_CPU_LIMIT=4.0 PGFUSION_MEM_LIMIT=8G docker compose up
+
+services:
+  pgfusion-cli:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      ssh:
+        - default
+    image: pgfusion:latest
+    entrypoint: ["/usr/local/bin/pgfusion_cli"]
+    command: ["-d", "/pgdata", "--db-id", "16384"]
+    volumes:
+      - "${PGDATA_PATH:?Set PGDATA_PATH to your PostgreSQL data directory}:/pgdata:ro"
+    stdin_open: true
+    tty: true
+    environment:
+      RUST_LOG: ${RUST_LOG:-info}
+    deploy:
+      resources:
+        limits:
+          cpus: "${PGFUSION_CPU_LIMIT:-2.0}"
+          memory: "${PGFUSION_MEM_LIMIT:-2G}"
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    # storage_opt:           # Linux overlay2+xfs / devicemapper only — not supported on macOS
+    #   size: "1G"
+
+  pgfusion-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      ssh:
+        - default
+    image: pgfusion:latest
+    entrypoint: ["/usr/local/bin/pgfusion_server"]
+    ports:
+      - "${PGFUSION_SERVER_PORT:-8080}:8080"
+    volumes:
+      - "${PGDATA_PATH:?Set PGDATA_PATH to your PostgreSQL data directory}:/pgdata:ro"
+    environment:
+      RUST_LOG: ${RUST_LOG:-info}
+    deploy:
+      resources:
+        limits:
+          cpus: "${PGFUSION_CPU_LIMIT:-2.0}"
+          memory: "${PGFUSION_MEM_LIMIT:-2G}"
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    # storage_opt:           # Linux overlay2+xfs / devicemapper only — not supported on macOS
+    #   size: "1G"
