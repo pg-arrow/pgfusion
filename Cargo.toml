@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-pg_arrow = { git = "ssh://git@github.com/pg-arrow/pg-arrow.git", branch = "main" }
+pg_arrow = { git = "ssh://git@github.com/pg-arrow/pg_arrow.git", branch = "main" }
 
 serde = { version = "1.0", features = ["derive"] }
 toml = "1.1.0"

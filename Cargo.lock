@@ -2529,7 +2529,7 @@ dependencies = [
 [[package]]
 name = "pg_arrow"
 version = "0.1.0"
-source = "git+ssh://git@github.com/pg-arrow/pg-arrow.git?branch=main#bcbeaf05aed880ccb624bdabb1b962f603d71827"
+source = "git+ssh://git@github.com/pg-arrow/pg_arrow.git?branch=main#bcbeaf05aed880ccb624bdabb1b962f603d71827"
 dependencies = [
  "arrow",
  "bytes",
