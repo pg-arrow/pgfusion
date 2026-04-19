@@ -246,25 +246,35 @@ EOF
 HEATMAP_FILE="$SCRIPT_DIR/heatmap.html"
 if [ -f "$HEATMAP_FILE" ]; then
     log_info "Embedding results into heatmap.html..."
-    # Build the replacement block
-    EMBED_BLOCK="<!-- RESULTS_DATA_START -->
-<script id=\"embedded-data\" type=\"application/json\">
-$(cat "$RESULTS_JSON")
-</script>
-<!-- RESULTS_DATA_END -->"
-    # Use python to do a reliable multi-line replacement
-    python3 -c "
-import re, sys
-html = open('$HEATMAP_FILE').read()
-replacement = sys.stdin.read()
+    # Use python to read results.json directly and embed it into heatmap.html,
+    # avoiding bash variable expansion which mangles backslash escapes in JSON.
+    python3 <<PYEOF
+import re, json
+
+with open('$RESULTS_JSON') as f:
+    json_data = f.read()
+
+replacement = (
+    '<!-- RESULTS_DATA_START -->\n'
+    '<script id="embedded-data" type="application/json">\n'
+    + json_data +
+    '\n</script>\n'
+    '<!-- RESULTS_DATA_END -->'
+)
+
+with open('$HEATMAP_FILE') as f:
+    html = f.read()
+
 html = re.sub(
     r'<!-- RESULTS_DATA_START -->.*?<!-- RESULTS_DATA_END -->',
-    replacement,
+    lambda m: replacement,
     html,
-    flags=re.DOTALL
+    flags=re.DOTALL,
 )
-open('$HEATMAP_FILE', 'w').write(html)
-" <<< "$EMBED_BLOCK"
+
+with open('$HEATMAP_FILE', 'w') as f:
+    f.write(html)
+PYEOF
 fi
 
 # ── Summary ──────────────────────────────────────────────────────────────────
