@@ -25,6 +25,10 @@ perf.data.old
 benches/clickbench/hits.tsv
 benches/clickbench/results.csv
 
+# TPC-H benchmark data and generator
+benches/tpch/data_sf1/
+benches/tpch/tpch-dbgen/
+
 # Test output/results
 tests/consistency/results.txt
 tests/sql_correctness/results.txt
