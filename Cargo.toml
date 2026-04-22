@@ -47,3 +47,8 @@ harness = false
 
 [profile.release]
 debug = true
+opt-level = 3 # Maximize optimizations
+# lto = "fat"       # "Fat" Link Time Optimization (cross-crate SIMD optimization)
+# codegen-units = 1 # Reduces parallelism during build to improve binary performance
+panic = "abort" # Reduces binary size and improves performance slightly
+strip = true    # Removes debug symbols to keep the binary small
