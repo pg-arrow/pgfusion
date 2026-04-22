@@ -7,8 +7,8 @@ pg_version := env_var_or_default("PG_VERSION", "pg18")
 # ── Default ───────────────────────────────────────────────────────────────────
 
 [group('default')]
-default:
-    @just --list
+help:
+    @just --list --unsorted
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
@@ -93,33 +93,6 @@ test-all pg=pg_version: (test-sql pg) (test-consistency pg)
 bench filter="":
     cargo bench --bench query_bench -- {{filter}}
 
-# ── ClickBench ────────────────────────────────────────────────────────────────
-
-# Download and load the ClickBench hits dataset into PostgreSQL
-# Set CLICKBENCH_MAX_ROWS=1000000 for a smaller dataset
-[group('clickbench')]
-clickbench-setup pg=pg_version:
-    cd benches/clickbench && bash setup.sh {{pg}}
-
-# Run the 43-query comparison (pgfusion vs PostgreSQL)
-[group('clickbench')]
-clickbench pg=pg_version runs="3":
-    cd benches/clickbench && bash run.sh {{pg}} {{runs}}
-
-# Open the ClickBench heatmap report in a browser
-[group('clickbench')]
-clickbench-report:
-    open benches/clickbench/heatmap.html
-
-# ── PostgreSQL CLI ────────────────────────────────────────────────────────────
-
-# Open a psql session for a given PostgreSQL version
-# Usage: just psql pg18   or   just psql pg18 test
-[group('postgres')]
-psql pg=pg_version db="postgres":
-    @bin=$(awk -v s="postgres.{{pg}}" '$0~"\\["s"\\]"{f=1} f&&$1=="bin_dir"{gsub(/.*= *"|"$/,""); print $0; exit}' ../pg_arrow/pg-test-config.toml); \
-     DYLD_LIBRARY_PATH="$bin/../lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}" "$bin/psql" {{db}}
-
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 # Interactive REPL
@@ -146,6 +119,33 @@ query-file data_dir file db_id="16384":
 [group('cli')]
 server:
     cargo run --release --bin pgfusion_server
+
+# ── ClickBench ────────────────────────────────────────────────────────────────
+
+# Download and load the ClickBench hits dataset into PostgreSQL
+# Set CLICKBENCH_MAX_ROWS=1000000 for a smaller dataset
+[group('clickbench')]
+clickbench-setup pg=pg_version:
+    cd benches/clickbench && bash setup.sh {{pg}}
+
+# Run the 43-query comparison (pgfusion vs PostgreSQL)
+[group('clickbench')]
+clickbench pg=pg_version runs="3":
+    cd benches/clickbench && bash run.sh {{pg}} {{runs}}
+
+# Open the ClickBench heatmap report in a browser
+[group('clickbench')]
+clickbench-report:
+    open benches/clickbench/heatmap.html
+
+# ── PostgreSQL CLI ────────────────────────────────────────────────────────────
+
+# Open a psql session for a given PostgreSQL version
+# Usage: just psql pg18   or   just psql pg18 test
+[group('postgres')]
+psql pg=pg_version db="postgres":
+    @bin=$(awk -v s="postgres.{{pg}}" '$0~"\\["s"\\]"{f=1} f&&$1=="bin_dir"{gsub(/.*= *"|"$/,""); print $0; exit}' ../pg_arrow/pg-test-config.toml); \
+     DYLD_LIBRARY_PATH="$bin/../lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}" "$bin/psql" {{db}}
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 
