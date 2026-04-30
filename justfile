@@ -129,14 +129,34 @@ clickbench-setup pg=pg_version:
     cd benches/clickbench && bash setup.sh {{pg}}
 
 # Run the 43-query comparison (pgfusion vs PostgreSQL)
+# Results always saved to checkpoints/current/
 [group('clickbench')]
 clickbench pg=pg_version runs="3":
     cd benches/clickbench && bash run.sh {{pg}} {{runs}}
 
-# Open the ClickBench heatmap report in a browser
+# Run and checkpoint results under checkpoints/<short-hash>[-label]/
+# Usage: just clickbench-checkpoint pg18 3 my-label
+[group('clickbench')]
+clickbench-checkpoint pg=pg_version runs="3" label="":
+    cd benches/clickbench && bash run.sh {{pg}} {{runs}} --checkpoint \
+        $([ -n "{{label}}" ] && echo "--label={{label}}" || true)
+
+# Checkpoint current results without re-running (optionally with a label)
+# Usage: just clickbench-save   or   just clickbench-save before-optimization
+[group('clickbench')]
+clickbench-save label="":
+    cd benches/clickbench && bash run.sh --checkpoint-only \
+        $([ -n "{{label}}" ] && echo "--label={{label}}" || true)
+
+# Open the ClickBench heatmap report in a browser (latest run)
 [group('clickbench')]
 clickbench-report:
     open benches/clickbench/heatmap.html
+
+# Open a checkpointed heatmap by slug (e.g. just clickbench-report-checkpoint f85939b-initial-results)
+[group('clickbench')]
+clickbench-report-checkpoint slug:
+    open benches/clickbench/checkpoints/{{slug}}/heatmap.html
 
 # ── PostgreSQL CLI ────────────────────────────────────────────────────────────
 

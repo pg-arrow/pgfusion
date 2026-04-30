@@ -64,7 +64,8 @@ just test-consistency pg18    # Consistency tests (vs live PostgreSQL)
 just bench                    # Criterion query benchmarks
 just clickbench-setup pg18    # Download and load ClickBench dataset
 just clickbench pg18          # Run 43-query comparison vs PostgreSQL
-just clickbench-report        # Open heatmap in browser
+just clickbench-save my-tag   # Checkpoint current results with a label
+just clickbench-report        # Open latest heatmap in browser
 just flamegraph /pgdata "SELECT count(*) FROM hits"  # CPU flamegraph
 just doc                      # Open rustdoc
 just --list                   # Show all available recipes
@@ -140,13 +141,18 @@ just test-all pg18            # All integration tests
 ## Benchmarks
 
 ```bash
-just bench                    # Criterion micro-benchmark
-just clickbench-setup pg18    # Download & load ClickBench dataset (~75 GB uncompressed)
-just clickbench pg18          # Run all 43 queries, compare pgfusion vs PostgreSQL
-just clickbench-report        # Open heatmap.html in browser
-just flamegraph-bench         # CPU flamegraph for query benchmarks
-just samply-bench             # samply profile for query benchmarks
+just bench                                         # Criterion micro-benchmark
+just clickbench-setup pg18                         # Download & load ClickBench dataset (~75 GB uncompressed)
+just clickbench pg18                               # Run all 43 queries, compare pgfusion vs PostgreSQL
+just clickbench-checkpoint pg18 3 before-opt       # Run + checkpoint as checkpoints/<hash>-before-opt/
+just clickbench-save before-optimization           # Checkpoint current results without re-running
+just clickbench-report                             # Open latest heatmap.html in browser
+just clickbench-report-checkpoint f85939b-initial  # Open a specific checkpoint's heatmap
+just flamegraph-bench                              # CPU flamegraph for query benchmarks
+just samply-bench                                  # samply profile for query benchmarks
 ```
+
+ClickBench results are always saved to `benches/clickbench/checkpoints/current/` after every run. Named checkpoints are stored under `checkpoints/<short-hash>[-label]/` and include `results.csv`, `results.json`, `heatmap.html`, `queries.sql`, and per-query output samples in `output/`.
 
 ## Dependencies
 
