@@ -66,6 +66,10 @@ just clickbench-setup pg18    # Download and load ClickBench dataset
 just clickbench pg18          # Run 43-query comparison vs PostgreSQL
 just clickbench-save my-tag   # Checkpoint current results with a label
 just clickbench-report        # Open latest heatmap in browser
+just tpch-setup pg18          # Build dbgen and load TPC-H SF1 dataset
+just tpch pg18                # Run 22-query comparison vs PostgreSQL
+just tpch-save my-tag         # Checkpoint current TPC-H results with a label
+just tpch-report              # Open latest TPC-H heatmap in browser
 just flamegraph /pgdata "SELECT count(*) FROM hits"  # CPU flamegraph
 just doc                      # Open rustdoc
 just --list                   # Show all available recipes
@@ -142,17 +146,35 @@ just test-all pg18            # All integration tests
 
 ```bash
 just bench                                         # Criterion micro-benchmark
+just flamegraph-bench                              # CPU flamegraph for query benchmarks
+just samply-bench                                  # samply profile for query benchmarks
+```
+
+### ClickBench (43 queries)
+
+```bash
 just clickbench-setup pg18                         # Download & load ClickBench dataset (~75 GB uncompressed)
 just clickbench pg18                               # Run all 43 queries, compare pgfusion vs PostgreSQL
 just clickbench-checkpoint pg18 3 before-opt       # Run + checkpoint as checkpoints/<hash>-before-opt/
 just clickbench-save before-optimization           # Checkpoint current results without re-running
 just clickbench-report                             # Open latest heatmap.html in browser
 just clickbench-report-checkpoint f85939b-initial  # Open a specific checkpoint's heatmap
-just flamegraph-bench                              # CPU flamegraph for query benchmarks
-just samply-bench                                  # samply profile for query benchmarks
 ```
 
 ClickBench results are always saved to `benches/clickbench/checkpoints/current/` after every run. Named checkpoints are stored under `checkpoints/<short-hash>[-label]/` and include `results.csv`, `results.json`, `heatmap.html`, `queries.sql`, and per-query output samples in `output/`.
+
+### TPC-H (22 queries, SF1)
+
+```bash
+just tpch-setup pg18                               # Build dbgen and load TPC-H SF1 dataset
+just tpch pg18                                     # Run all 22 queries, compare pgfusion vs PostgreSQL
+just tpch-checkpoint pg18 3 before-opt             # Run + checkpoint as checkpoints/<hash>-before-opt/
+just tpch-save before-optimization                 # Checkpoint current results without re-running
+just tpch-report                                   # Open latest heatmap.html in browser
+just tpch-report-checkpoint f85939b-initial        # Open a specific checkpoint's heatmap
+```
+
+TPC-H results are always saved to `benches/tpch/checkpoints/current/` after every run. Named checkpoints are stored under `checkpoints/<short-hash>[-label]/` and include `results.csv`, `results.json`, `heatmap.html`, `queries.sql`, and per-query output samples in `output/`.
 
 ## Dependencies
 

@@ -158,6 +158,43 @@ clickbench-report:
 clickbench-report-checkpoint slug:
     open benches/clickbench/checkpoints/{{slug}}/heatmap.html
 
+# ── TPC-H ─────────────────────────────────────────────────────────────────────
+
+# Download, build dbgen, and load TPC-H SF1 dataset into PostgreSQL
+[group('tpch')]
+tpch-setup pg=pg_version:
+    cd benches/tpch && bash setup.sh {{pg}}
+
+# Run the 22-query comparison (pgfusion vs PostgreSQL)
+# Results always saved to checkpoints/current/
+[group('tpch')]
+tpch pg=pg_version runs="3":
+    cd benches/tpch && bash run.sh {{pg}} {{runs}}
+
+# Run and checkpoint results under checkpoints/<short-hash>[-label]/
+# Usage: just tpch-checkpoint pg18 3 my-label
+[group('tpch')]
+tpch-checkpoint pg=pg_version runs="3" label="":
+    cd benches/tpch && bash run.sh {{pg}} {{runs}} --checkpoint \
+        $([ -n "{{label}}" ] && echo "--label={{label}}" || true)
+
+# Checkpoint current results without re-running (optionally with a label)
+# Usage: just tpch-save   or   just tpch-save before-optimization
+[group('tpch')]
+tpch-save label="":
+    cd benches/tpch && bash run.sh --checkpoint-only \
+        $([ -n "{{label}}" ] && echo "--label={{label}}" || true)
+
+# Open the TPC-H heatmap report in a browser (latest run)
+[group('tpch')]
+tpch-report:
+    open benches/tpch/heatmap.html
+
+# Open a checkpointed TPC-H heatmap by slug (e.g. just tpch-report-checkpoint f85939b-initial)
+[group('tpch')]
+tpch-report-checkpoint slug:
+    open benches/tpch/checkpoints/{{slug}}/heatmap.html
+
 # ── PostgreSQL CLI ────────────────────────────────────────────────────────────
 
 # Open a psql session for a given PostgreSQL version
