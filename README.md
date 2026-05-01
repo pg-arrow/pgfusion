@@ -163,6 +163,14 @@ just clickbench-report-checkpoint f85939b-initial  # Open a specific checkpoint'
 
 ClickBench results are always saved to `benches/clickbench/checkpoints/current/` after every run. Named checkpoints are stored under `checkpoints/<short-hash>[-label]/` and include `results.csv`, `results.json`, `heatmap.html`, `queries.sql`, and per-query output samples in `output/`.
 
+#### Run Result
+
+##### Mac M2 Pro 10 core 32GB 1TB SSD
+
+<img width="700"  alt="image" src="https://github.com/user-attachments/assets/6ad22508-bbd4-4072-8978-d5bdebfe68ec" />
+
+Note: Some of the pgfusion results are wrong, e.g., (Q36, Q42, etc.) refer to the output folder for the query run results.
+
 ### TPC-H (22 queries, SF1)
 
 ```bash
