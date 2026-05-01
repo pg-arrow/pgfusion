@@ -169,7 +169,7 @@ ClickBench results are always saved to `benches/clickbench/checkpoints/current/`
 
 <img width="700"  alt="image" src="https://github.com/user-attachments/assets/6ad22508-bbd4-4072-8978-d5bdebfe68ec" />
 
-Note: Some of the pgfusion results are wrong, e.g., (Q36, Q42, etc.) refer to the output folder for the query run results.
+> **Note:** Some of the pgfusion results are wrong, e.g., (Q36, Q42, etc.) refer to the output folder for the query run results.
 
 ### TPC-H (22 queries, SF1)
 
