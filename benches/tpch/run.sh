@@ -5,11 +5,12 @@ set -euo pipefail
 # Runs all 22 TPC-H queries against both engines, captures timing, and produces a comparison.
 #
 # Usage:
-#   ./run.sh [pg_version] [runs] [--checkpoint] [--checkpoint-only] [--label=<text>]
+#   ./run.sh [pg_version] [runs] [--checkpoint] [--checkpoint-only] [--label=<text>] [--query=N]
 #
 #   --checkpoint         After a full run, save results to checkpoints/<short-hash>[-label]/
 #   --checkpoint-only    Skip the benchmark run; just archive current results to checkpoints/<short-hash>[-label]/
 #   --label=<text>       Tag appended to the checkpoint folder name (e.g. --label=before-optimization)
+#   --query=N            Run only query N (1-based); skips all others
 #
 # Results are always copied to checkpoints/current/ at the end of every run.
 
@@ -23,12 +24,14 @@ RUNS=3
 DO_CHECKPOINT=false
 CHECKPOINT_ONLY=false
 CHECKPOINT_LABEL=""
+QUERY_FILTER=""
 
 for arg in "$@"; do
     case "$arg" in
         --checkpoint)        DO_CHECKPOINT=true ;;
         --checkpoint-only)   DO_CHECKPOINT=true; CHECKPOINT_ONLY=true ;;
         --label=*)           CHECKPOINT_LABEL="${arg#--label=}" ;;
+        --query=*)           QUERY_FILTER="${arg#--query=}" ;;
         --*)                 echo "Unknown flag: $arg" >&2; exit 1 ;;
         *)
             if [ "$PG_VERSION" = "pg18" ] && [[ "$arg" =~ ^pg ]]; then
@@ -235,11 +238,19 @@ run_pgfusion_query() {
 }
 
 extract_pg_time() {
-    echo "$1" | sed -n 's/.*Time: \([0-9.]*\) ms.*/\1/p' | head -1
+    set +o pipefail
+    local result
+    result=$(echo "$1" | grep -oE 'Time: [0-9.]+ ms' | grep -oE '[0-9.]+' | head -1) || true
+    set -o pipefail
+    echo "$result"
 }
 
 extract_pgfusion_time() {
-    echo "$1" | sed -n 's/.*Time: \([0-9.]*\)ms.*/\1/p' | head -1
+    set +o pipefail
+    local result
+    result=$(echo "$1" | grep -oE 'Time: [0-9.]+ms' | grep -oE '[0-9.]+' | head -1) || true
+    set -o pipefail
+    echo "$result"
 }
 
 # ── Run benchmark ────────────────────────────────────────────────────────────
@@ -257,6 +268,13 @@ JSON_ENTRIES=""
 for i in "${!QUERIES[@]}"; do
     qname="${QUERY_NAMES[$i]}"
     query="${QUERIES[$i]}"
+    query_num=$(( i + 1 ))
+
+    if [ -n "$QUERY_FILTER" ]; then
+        filter_norm="${QUERY_FILTER#Q}"
+        qname_norm="${qname#Q}"
+        [ "$qname_norm" != "$filter_norm" ] && continue
+    fi
 
     # ── PostgreSQL ───────────────────────────────────────────────────────────
     pg_best=""
@@ -452,7 +470,8 @@ BOTH_COUNT=0
 COMPARISON=""
 for i in "${!QUERIES[@]}"; do
     qname="${QUERY_NAMES[$i]}"
-    line=$(grep "^$qname," "$RESULTS_CSV")
+    line=$(grep "^$qname," "$RESULTS_CSV" || true)
+    [ -z "$line" ] && continue
     pf_ms=$(echo "$line" | cut -d, -f2)
     pf_st=$(echo "$line" | cut -d, -f3)
     pg_ms=$(echo "$line" | cut -d, -f4)
