@@ -1,0 +1,15 @@
+[2026-05-06T20:27:39Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1259
+[2026-05-06T20:27:39Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1259
+[2026-05-06T20:27:39Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1249
+[2026-05-06T20:27:39Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1249
++---------------------+-------------+---+---------------------+---------------------------+
+| watchid             | clientip    | c | sum(hits.isrefresh) | avg(hits.resolutionwidth) |
++---------------------+-------------+---+---------------------+---------------------------+
+| 8475981369641955511 | 2102420510  | 1 | 0                   | 1828.0                    |
+| 5663055708021936973 | 1889497292  | 1 | 0                   | 1750.0                    |
+| 5752475799574028538 | 469310927   | 1 | 0                   | 1638.0                    |
+| 6073015919286721379 | 1479438733  | 1 | 0                   | 1750.0                    |
+| 5272694473783134661 | 1880539940  | 1 | 0                   | 1750.0                    |
+| 6375178687917285845 | 1370332340  | 1 | 0                   | 1638.0                    |
+| 7786771848220572172 | 637262666   | 1 | 0                   | 1368.0                    |
+| 6127016185567487310 | -1199444551 | 1 | 0                   | 1638.0                    |

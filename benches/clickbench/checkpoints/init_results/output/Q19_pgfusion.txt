@@ -1,0 +1,13 @@
+[2026-05-06T19:44:51Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1259
+[2026-05-06T19:44:51Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1259
+[2026-05-06T19:44:51Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1249
+[2026-05-06T19:44:51Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1249
++--------------------+
+| userid             |
++--------------------+
+| 435090932899640449 |
+| 435090932899640449 |
+| 435090932899640449 |
+| 435090932899640449 |
++--------------------+
+Time: 11244.983ms (00:00:11.244)

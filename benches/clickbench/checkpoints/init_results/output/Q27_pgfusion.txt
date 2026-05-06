@@ -1,0 +1,15 @@
+[2026-05-06T20:03:08Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1259
+[2026-05-06T20:03:08Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1259
+[2026-05-06T20:03:08Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1249
+[2026-05-06T20:03:08Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1249
++-----------+--------------------+---------+
+| counterid | l                  | c       |
++-----------+--------------------+---------+
+| 233773    | 394.6321349724993  | 2721384 |
+| 245438    | 245.60823179932564 | 2452052 |
+| 122612    | 225.84979367680077 | 3559464 |
+| 234004    | 198.08936562473812 | 238660  |
+| 1634      | 187.95694383857884 | 323229  |
+| 786       | 180.36009889818135 | 120528  |
+| 114157    | 138.6298362974846  | 216307  |
+| 515       | 123.96623033619909 | 146907  |

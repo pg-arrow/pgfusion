@@ -1,0 +1,15 @@
+[2026-05-06T19:11:19Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1259
+[2026-05-06T19:11:19Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1259
+[2026-05-06T19:11:19Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1249
+[2026-05-06T19:11:19Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1249
++---------------------------+-------+
+| searchphrase              | u     |
++---------------------------+-------+
+| карелки                   | 23673 |
+| смотреть онлайн           | 19747 |
+| албатрутдин               | 18394 |
+| смотреть онлайн бесплатно | 17553 |
+| смотреть                  | 14603 |
+| экзоидные                 | 14529 |
+| мангу в зарабей грама     | 14198 |
+| сколько мытищи            | 9007  |

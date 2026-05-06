@@ -1,0 +1,15 @@
+[2026-05-06T19:38:20Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1259
+[2026-05-06T19:38:20Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1259
+[2026-05-06T19:38:20Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1249
+[2026-05-06T19:38:20Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1249
++---------------------+---------------------------------------+----------+
+| userid              | searchphrase                          | count(*) |
++---------------------+---------------------------------------+----------+
+| 510600699465021332  |                                       | 19       |
+| 699167801132169009  | world+war+z                           | 1        |
+| 1819230791340475562 |                                       | 63       |
+| 512121164499531196  |                                       | 22       |
+| 512265444607568707  | где морем                             | 1        |
+| 756637208845336317  | ресту знакомисси лайн бесплатно       | 2        |
+| 515830734509762624  |                                       | 24       |
+| 517982556607230077  |                                       | 3        |

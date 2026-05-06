@@ -1,0 +1,10 @@
+[2026-05-06T16:13:51Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1259
+[2026-05-06T16:13:51Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1259
+[2026-05-06T16:13:51Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1249
+[2026-05-06T16:13:51Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1249
++-----------------------+----------+---------------------------+
+| sum(hits.advengineid) | count(*) | avg(hits.resolutionwidth) |
++-----------------------+----------+---------------------------+
+| 7280088               | 99997497 | 1513.4879349030107        |
++-----------------------+----------+---------------------------+
+Time: 13056.567ms (00:00:13.056)

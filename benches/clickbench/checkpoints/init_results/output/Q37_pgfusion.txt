@@ -1,0 +1,15 @@
+[2026-05-06T21:22:17Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1259
+[2026-05-06T21:22:17Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1259
+[2026-05-06T21:22:17Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1249
+[2026-05-06T21:22:17Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1249
++----------------------------------------------------------------------+-----------+
+| title                                                                | pageviews |
++----------------------------------------------------------------------+-----------+
+| Тест (Россия) - Яндекс                                               | 122407    |
+| Шарарай), Выбрать! - обсуждаются на голд: Шоубиз - Свободная историс | 82935     |
+| Приморск - IRR.ru                                                    | 80958     |
+| Брюки New Era H (Асус) 258 общая выплаток, горшечными                | 39098     |
+| Теплоску на                                                          | 23123     |
+| Dave and Hotpoint sport – самые вещие                                | 14329     |
+| AUTO.ria.ua ™ - Аппер                                                | 14053     |
+| Приморск (Россия) - Яндекс.Видео                                     | 13912     |

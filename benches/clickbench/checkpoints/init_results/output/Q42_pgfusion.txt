@@ -1,0 +1,15 @@
+[2026-05-06T21:32:30Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1259
+[2026-05-06T21:32:30Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1259
+[2026-05-06T21:32:30Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1249
+[2026-05-06T21:32:30Z INFO  pg_arrow::file::reader] Reading from segment file /Users/nmbr7/.NMBR7/Projects/pg-arrow/pg_arrow/testdata/postgres-pg18/data/base/16727/1249
++---------------------+-----------+
+| m                   | pageviews |
++---------------------+-----------+
+| 2013-07-14T20:00:00 | 466       |
+| 2013-07-14T20:01:00 | 439       |
+| 2013-07-14T20:02:00 | 422       |
+| 2013-07-14T20:03:00 | 386       |
+| 2013-07-14T20:04:00 | 450       |
+| 2013-07-14T20:05:00 | 473       |
+| 2013-07-14T20:06:00 | 446       |
+| 2013-07-14T20:07:00 | 490       |
