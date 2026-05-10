@@ -44,15 +44,6 @@ just query /path/to/pgdata "SELECT count(*) FROM my_table"
 just query-file /path/to/pgdata queries.sql
 ```
 
-### REPL commands
-
-| Command | Description |
-|---|---|
-| `\dt` | List tables |
-| `\timing` | Toggle query timing |
-| `\?` | Show help |
-| `\q` | Quit |
-
 ## Common commands
 
 ```bash
@@ -167,7 +158,8 @@ ClickBench results are always saved to `benches/clickbench/checkpoints/current/`
 
 ##### Mac M2 Pro 10 core 32GB 1TB SSD
 
-<img width="700"  alt="image" src="https://github.com/user-attachments/assets/6ad22508-bbd4-4072-8978-d5bdebfe68ec" />
+<img width="700"  alt="image" src="https://github.com/user-attachments/assets/79e2a570-6af1-430a-a2d0-7793094800a0" />
+
 
 > **Note:** Some of the pgfusion results are wrong, e.g., (Q36, Q42, etc.) refer to the output folder for the query run results.
 
