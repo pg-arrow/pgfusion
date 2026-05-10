@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-pg_arrow = { path = "../pg_arrow" }
+pg_arrow = { git = "ssh://git@github.com/pg-arrow/pg_arrow.git", rev = "1a233cfe9796f662b2a899fa209a31da4cd381cf" }
 
 serde = { version = "1.0", features = ["derive"] }
 toml = "1.1.0"
@@ -50,7 +50,7 @@ path = "examples/client/rust/flight_sql.rs"
 [dev-dependencies]
 arrow-flight = { version = "=58.0.0", features = ["flight-sql"] }
 criterion = { version = "0.6", features = ["async_tokio"] }
-pg-test-harness = { path = "../utilities/pg-test-harness" }
+pg-test-harness = { git = "ssh://git@github.com/pg-arrow/utils.git", rev = "2eb4d339686830b650e161ef1b68e01cea4601ef" }
 tonic = "0.14.6"
 
 [[bench]]
