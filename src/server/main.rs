@@ -7,5 +7,5 @@ static GLOBAL: MiMalloc = MiMalloc;
 #[tokio::main]
 async fn main() -> Result<(), PgError> {
     env_logger::init();
-    pgfusion_lib::server::run().await
+    todo!("pgfusion_server is not yet implemented")
 }

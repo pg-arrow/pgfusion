@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-pg_arrow = { git = "ssh://git@github.com/pg-arrow/pg_arrow.git", branch = "main" }
+pg_arrow = { path = "../pg_arrow" }
 
 serde = { version = "1.0", features = ["derive"] }
 toml = "1.1.0"
@@ -12,7 +12,7 @@ derive-where = "1.0"
 log = "0.4"
 env_logger = "0.11"
 thiserror = "2"
-arrow = "58.0.0"
+arrow = { version = "58.0.0", features = ["prettyprint"] }
 datafusion = "53.0.0"
 tokio = { version = "1.51.1", features = [
   "rt-multi-thread",
@@ -23,8 +23,9 @@ tokio-util = "0.7"
 async-trait = "0.1.89"
 futures = "0.3.32"
 clap = { version = "4", features = ["derive"] }
-rustyline = "18.0.0"
+rustyline = { version = "18.0.0", features = ["derive"] }
 mimalloc = "0.1"
+rustyline-derive = "0.12.0"
 
 [lib]
 name = "pgfusion_lib"
@@ -38,8 +39,19 @@ path = "src/cli/main.rs"
 name = "pgfusion_server"
 path = "src/server/main.rs"
 
+[[example]]
+name = "count_query"
+path = "examples/lib/rust/count_query.rs"
+
+[[example]]
+name = "flight_sql_client"
+path = "examples/client/rust/flight_sql.rs"
+
 [dev-dependencies]
+arrow-flight = { version = "=58.0.0", features = ["flight-sql"] }
 criterion = { version = "0.6", features = ["async_tokio"] }
+pg-test-harness = { path = "../utilities/pg-test-harness" }
+tonic = "0.14.6"
 
 [[bench]]
 name = "query_bench"
