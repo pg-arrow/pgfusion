@@ -55,6 +55,8 @@ resolve_binaries() {
     DATA_DIR="$(read_toml "postgres.$PG_VERSION" "data_dir")"
     PSQL="$BIN_DIR/psql"
     PG_CTL="$BIN_DIR/pg_ctl"
+    LIB_DIR="$(cd "$BIN_DIR/../lib" && pwd)"
+    export DYLD_LIBRARY_PATH="$LIB_DIR${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
 
     for bin in "$PSQL" "$PG_CTL"; do
         [ -x "$bin" ] || { echo "ERROR: $bin not found" >&2; exit 1; }
@@ -91,7 +93,13 @@ get_db_oid() {
     pg_ensure_running
     DB_OID=$(pg_query "SELECT oid FROM pg_database WHERE datname = 'test';")
     [ -n "$DB_OID" ] || { echo "ERROR: Cannot find OID for 'test' database" >&2; exit 1; }
-    log_info "Database OID: $DB_OID  |  Data dir: $DATA_DIR"
+
+    PG_PORT=$("$PSQL" -t -A -c "SHOW port;" postgres 2>/dev/null || echo "5432")
+    PG_SOCKET_DIR=$("$PSQL" -t -A -c "SHOW unix_socket_directories;" postgres 2>/dev/null || echo "/tmp")
+    PG_SOCKET_DIR=$(echo "$PG_SOCKET_DIR" | tr ',' '\n' | head -1 | xargs)
+    PG_URL="host=$PG_SOCKET_DIR port=$PG_PORT dbname=test"
+
+    log_info "Database OID: $DB_OID  |  Data dir: $DATA_DIR  |  PG URL: $PG_URL"
 }
 
 # ── Output normalization ────────────────────────────────────────────────────
@@ -142,7 +150,8 @@ pgfusion_poll() {
 
     for attempt in $(seq 1 $MAX_READS); do
         local t0; t0=$(now_ms)
-        local raw; raw=$("$PG_FUSION" -d "$DATA_DIR" --db-id "$DB_OID" -c "$read_query" 2>&1)
+        local raw; raw=$("$PG_FUSION" -d "$DATA_DIR" --db-id "$DB_OID" \
+            --pg-url "$PG_URL" --checkpoint --consistent -c "$read_query" 2>&1)
         local t1; t1=$(now_ms)
         local ms; ms=$(elapsed_ms "$t0" "$t1")
 

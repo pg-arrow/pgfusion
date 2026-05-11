@@ -16,7 +16,9 @@ use datafusion::physical_plan::{
     DisplayAs, DisplayFormatType, ExecutionPlan, PlanProperties, SendableRecordBatchStream,
 };
 use futures::Stream;
+use crate::snapshot::PgSnapshot;
 use pg_arrow::file::reader::{AsyncBatchStream, Oid};
+use pg_arrow::heap::snapshot::PgSnapshot as ArrowPgSnapshot;
 use pg_arrow::types::{PgClass, PgSchema};
 use std::any::Any;
 use std::pin::Pin;
@@ -40,6 +42,7 @@ struct PgTableExec {
     projections: Option<(SchemaRef, Vec<usize>)>,
     properties: Arc<PlanProperties>,
     metrics: ExecutionPlanMetricsSet,
+    snapshot: Option<ArrowPgSnapshot>,
 }
 
 impl DisplayAs for PgTableExec {
@@ -93,13 +96,16 @@ impl ExecutionPlan for PgTableExec {
         let start = partition * pages_per_partition;
         let end = ((partition + 1) * pages_per_partition).min(total_pages);
 
-        let batch_stream = AsyncBatchStream::new(
+        let mut batch_stream = AsyncBatchStream::new(
             self.db_id,
             self.table_metadata.relfilenode as usize,
             self.schema.clone(),
             projection,
         )
         .with_page_range(start, end);
+        if let Some(snap) = self.snapshot.clone() {
+            batch_stream = batch_stream.with_snapshot(snap);
+        }
 
         let arrow_schema = match &self.projections {
             Some((schema, _)) => schema.clone(),
@@ -128,6 +134,7 @@ impl PgTableExec {
         pg_schema: PgSchema,
         db: Oid,
         table_metadata: PgClass,
+        snapshot: Option<ArrowPgSnapshot>,
     ) -> Self {
         let proj = if let Some(proj) = projections {
             let projected_schema = project_schema(&schema, projections).unwrap();
@@ -148,6 +155,7 @@ impl PgTableExec {
                 Boundedness::Bounded,
             )),
             metrics: ExecutionPlanMetricsSet::new(),
+            snapshot,
         }
     }
 }
@@ -173,10 +181,11 @@ impl RecordBatchStream for PgRecordBatchStream {
 }
 
 impl CustomDataSource {
-    pub(crate) async fn create_physical_plan(
+    pub(crate) fn create_physical_plan(
         &self,
         projections: Option<&Vec<usize>>,
         schema: SchemaRef,
+        snapshot: Option<ArrowPgSnapshot>,
     ) -> Result<Arc<dyn ExecutionPlan>> {
         Ok(Arc::new(PgTableExec::new(
             projections,
@@ -184,6 +193,7 @@ impl CustomDataSource {
             self.pg_schema.clone(),
             self.db_id,
             self.table_metadata.clone(),
+            snapshot,
         )))
     }
 }
@@ -204,13 +214,22 @@ impl TableProvider for CustomDataSource {
 
     async fn scan(
         &self,
-        _state: &dyn Session,
+        state: &dyn Session,
         projection: Option<&Vec<usize>>,
-        // filters and limit can be used here to inject some push-down operations if needed
         _filters: &[Expr],
         _limit: Option<usize>,
     ) -> Result<Arc<dyn ExecutionPlan>> {
-        return self.create_physical_plan(projection, self.schema()).await;
+        let snapshot = state
+            .config()
+            .options()
+            .extensions
+            .get::<PgSnapshot>()
+            .map(|s| ArrowPgSnapshot {
+                xmin: s.xmin,
+                xmax: s.xmax,
+                xip: s.xip.clone(),
+            });
+        self.create_physical_plan(projection, self.schema(), snapshot)
     }
 }
 

@@ -12,8 +12,10 @@ use futures::StreamExt;
 use mimalloc::MiMalloc;
 use pg_arrow::file::{error::PgError, set_data_dir};
 use pgfusion_lib::session::SessionOptions;
+use pgfusion_lib::snapshot::PgSnapshot;
 use rustyline::hint::HistoryHinter;
 use rustyline::Editor;
+use tokio_postgres;
 use tokio_util::sync::CancellationToken;
 
 #[global_allocator]
@@ -58,6 +60,25 @@ struct Cli {
     /// Disable coalescing of small batches between operators
     #[arg(long)]
     no_coalesce: bool,
+
+    /// PostgreSQL connection string (e.g. "host=localhost dbname=tpch").
+    /// Required when --checkpoint is set.
+    #[arg(long)]
+    pg_url: Option<String>,
+
+    /// Run CHECKPOINT on the PostgreSQL server before executing queries.
+    /// Requires --pg-url.
+    #[arg(long)]
+    checkpoint: bool,
+
+    /// Acquire a REPEATABLE READ snapshot before each query for MVCC-consistent reads.
+    /// Requires --pg-url.
+    #[arg(long)]
+    consistent: bool,
+
+    /// Print per-phase timing breakdown (pg connect, snapshot, query, rollback).
+    #[arg(long)]
+    debug_timing: bool,
 }
 
 fn parse_memory_size(s: &str) -> usize {
@@ -92,6 +113,22 @@ fn format_elapsed(elapsed: Duration) -> String {
     } else {
         format!("{:.3}ms", ms)
     }
+}
+
+async fn run_pg_checkpoint(pg_url: &str) -> Result<(), PgError> {
+    let (client, connection) = tokio_postgres::connect(pg_url, tokio_postgres::NoTls)
+        .await
+        .map_err(|e| PgError::DecodeError(format!("pg connect failed: {e}")))?;
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            eprintln!("pg connection error: {e}");
+        }
+    });
+    client
+        .execute("CHECKPOINT", &[])
+        .await
+        .map_err(|e| PgError::DecodeError(format!("CHECKPOINT failed: {e}")))?;
+    Ok(())
 }
 
 async fn execute_query(ctx: &SessionContext, sql: &str) -> Result<(), DataFusionError> {
@@ -149,15 +186,117 @@ async fn execute_query(ctx: &SessionContext, sql: &str) -> Result<(), DataFusion
     result
 }
 
-async fn execute_file(ctx: &SessionContext, path: &str, timing: bool) -> Result<(), PgError> {
+async fn maybe_checkpoint(pg_url: Option<&str>) {
+    if let Some(url) = pg_url {
+        if let Err(e) = run_pg_checkpoint(url).await {
+            eprintln!("Warning: checkpoint failed: {e}");
+        }
+    }
+}
+
+/// Open a REPEATABLE READ transaction on PostgreSQL, get the snapshot, inject it into
+/// the session config, run `f`, then commit. The open transaction holds back VACUUM
+/// from removing dead tuple versions that the snapshot needs to see (or exclude).
+/// When `debug` is true, prints timing for each phase.
+async fn with_pg_snapshot<F, Fut>(ctx: &SessionContext, pg_url: &str, debug: bool, f: F)
+where
+    F: FnOnce() -> Fut,
+    Fut: std::future::Future<Output = ()>,
+{
+    let t_connect = Instant::now();
+    let conn_result = tokio_postgres::connect(pg_url, tokio_postgres::NoTls).await;
+    let (client, conn) = match conn_result {
+        Ok(pair) => pair,
+        Err(e) => {
+            eprintln!("Warning: pg connect failed: {e}");
+            f().await;
+            return;
+        }
+    };
+    if debug {
+        eprintln!("[debug] pg connect:       {}", format_elapsed(t_connect.elapsed()));
+    }
+    tokio::spawn(async move {
+        if let Err(e) = conn.await {
+            eprintln!("pg connection error: {e}");
+        }
+    });
+
+    let t_snap = Instant::now();
+    let snap = async {
+        client
+            .execute("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ", &[])
+            .await
+            .map_err(|e| format!("BEGIN failed: {e}"))?;
+        let row = client
+            .query_one("SELECT txid_current_snapshot()::text", &[])
+            .await
+            .map_err(|e| format!("snapshot query failed: {e}"))?;
+        let snap_str: &str = row.get(0);
+        PgSnapshot::parse(snap_str).ok_or_else(|| format!("failed to parse snapshot: {snap_str}"))
+    }
+    .await;
+
+    match snap {
+        Ok(snap) => {
+            if debug {
+                eprintln!(
+                    "[debug] snapshot acquire: {} (xmin={} xmax={} xip={})",
+                    format_elapsed(t_snap.elapsed()),
+                    snap.xmin,
+                    snap.xmax,
+                    snap.xip.len()
+                );
+            }
+            ctx.state_ref()
+                .write()
+                .config_mut()
+                .options_mut()
+                .extensions
+                .insert(snap);
+            let t_query = Instant::now();
+            f().await;
+            if debug {
+                eprintln!("[debug] query execution:  {}", format_elapsed(t_query.elapsed()));
+            }
+        }
+        Err(e) => {
+            eprintln!("Warning: snapshot acquisition failed: {e}");
+            f().await;
+        }
+    }
+
+    let t_rollback = Instant::now();
+    let _ = client.execute("ROLLBACK", &[]).await;
+    if debug {
+        eprintln!("[debug] rollback:         {}", format_elapsed(t_rollback.elapsed()));
+    }
+}
+
+async fn execute_file(
+    ctx: &SessionContext,
+    path: &str,
+    timing: bool,
+    debug: bool,
+    checkpoint_url: Option<&str>,
+    snapshot_url: Option<&str>,
+) -> Result<(), PgError> {
     let sql = std::fs::read_to_string(path).map_err(|e| PgError::DecodeError(e.to_string()))?;
     for stmt in sql.split(';') {
         let stmt = stmt.trim();
         if stmt.is_empty() {
             continue;
         }
+        maybe_checkpoint(checkpoint_url).await;
         let start = Instant::now();
-        if let Err(e) = execute_query(ctx, stmt).await {
+        if let Some(url) = snapshot_url {
+            with_pg_snapshot(ctx, url, debug, || async {
+                if let Err(e) = execute_query(ctx, stmt).await {
+                    eprintln!("Error: {e}");
+                }
+            })
+            .await;
+        } else if let Err(e) = execute_query(ctx, stmt).await {
             eprintln!("Error: {e}");
         }
         if timing {
@@ -167,9 +306,24 @@ async fn execute_file(ctx: &SessionContext, path: &str, timing: bool) -> Result<
     Ok(())
 }
 
-async fn run_command(ctx: &SessionContext, sql: &str, timing: bool) {
+async fn run_command(
+    ctx: &SessionContext,
+    sql: &str,
+    timing: bool,
+    debug: bool,
+    checkpoint_url: Option<&str>,
+    snapshot_url: Option<&str>,
+) {
+    maybe_checkpoint(checkpoint_url).await;
     let start = Instant::now();
-    if let Err(e) = execute_query(ctx, sql).await {
+    if let Some(url) = snapshot_url {
+        with_pg_snapshot(ctx, url, debug, || async {
+            if let Err(e) = execute_query(ctx, sql).await {
+                eprintln!("Error: {e}");
+            }
+        })
+        .await;
+    } else if let Err(e) = execute_query(ctx, sql).await {
         eprintln!("Error: {e}");
     }
     if timing {
@@ -241,6 +395,7 @@ fn print_help(out: &mut impl Write) -> io::Result<()> {
     writeln!(out, "  \\d <table>     Describe table columns")?;
     writeln!(out, "  \\dt            List tables")?;
     writeln!(out, "  \\timing        Toggle query timing")?;
+    writeln!(out, "  \\debug         Toggle debug timing (pg connect / snapshot / query / rollback)")?;
     writeln!(out, "  \\i <file>      Execute SQL from file")?;
     writeln!(out, "  \\c             Show current connection info")?;
     writeln!(out, "  \\x             Toggle expanded display (not yet supported)")?;
@@ -268,13 +423,29 @@ async fn main() -> Result<(), PgError> {
     let ctx = pgfusion_lib::create_session_with_options(db_id, &opts)
         .expect("failed to create session");
 
+    if (cli.checkpoint || cli.consistent) && cli.pg_url.is_none() {
+        eprintln!("Warning: --checkpoint and --consistent require --pg-url");
+    }
+    let checkpoint_url: Option<&str> = if cli.checkpoint {
+        cli.pg_url.as_deref()
+    } else {
+        None
+    };
+    let snapshot_url: Option<&str> = if cli.consistent {
+        cli.pg_url.as_deref()
+    } else {
+        None
+    };
+
+    let debug = cli.debug_timing;
+
     if let Some(command) = cli.command {
-        run_command(&ctx, &command, cli.timing).await;
+        run_command(&ctx, &command, cli.timing, debug, checkpoint_url, snapshot_url).await;
         return Ok(());
     }
 
     if let Some(ref file) = cli.file {
-        return execute_file(&ctx, file, cli.timing).await;
+        return execute_file(&ctx, file, cli.timing, debug, checkpoint_url, snapshot_url).await;
     }
 
     let mut stdout = io::stdout();
@@ -290,6 +461,7 @@ async fn main() -> Result<(), PgError> {
     let mut rl: Editor<PgFusionHelper, _> = Editor::new().unwrap();
     rl.set_helper(Some(helper));
     let mut timing = cli.timing;
+    let mut debug = debug;
 
     loop {
         let readline = rl.readline("pg_fusion> ");
@@ -302,13 +474,19 @@ async fn main() -> Result<(), PgError> {
 
                 let _ = rl.add_history_entry(trimmed);
 
+                if trimmed == "\\debug" {
+                    debug = !debug;
+                    writeln!(stdout, "Debug timing is {}.", if debug { "on" } else { "off" }).ok();
+                    continue;
+                }
+
                 // \i needs async + ctx, handle before resolve_input
                 if let Some(path) = trimmed.strip_prefix("\\i").map(str::trim) {
                     if path.is_empty() {
                         eprintln!("Usage: \\i <file>");
                     } else {
                         let start = Instant::now();
-                        if let Err(e) = execute_file(&ctx, path, false).await {
+                        if let Err(e) = execute_file(&ctx, path, false, debug, checkpoint_url, snapshot_url).await {
                             eprintln!("Error: {e}");
                         }
                         if timing {
@@ -321,7 +499,7 @@ async fn main() -> Result<(), PgError> {
                 match resolve_input(trimmed, &mut stdout, &mut timing, &cli.data_dir, db_id) {
                     InputAction::Quit => break,
                     InputAction::Done => continue,
-                    InputAction::Query(sql) => run_command(&ctx, &sql, timing).await,
+                    InputAction::Query(sql) => run_command(&ctx, &sql, timing, debug, checkpoint_url, snapshot_url).await,
                 }
             }
             Err(
