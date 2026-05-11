@@ -189,6 +189,16 @@ tpch-save label="":
     cd benches/tpch && bash run.sh --checkpoint-only \
         $([ -n "{{label}}" ] && echo "--label={{label}}" || true)
 
+# Run a single TPC-H query by number (e.g. just tpch-query 16)
+[group('tpch')]
+tpch-query query pg=pg_version:
+    cd benches/tpch && bash run.sh {{pg}} --query={{query}}
+
+# Run all TPC-H queries except the given one (e.g. just tpch-skip 17)
+[group('tpch')]
+tpch-skip skip pg=pg_version runs="3":
+    cd benches/tpch && bash run.sh {{pg}} {{runs}} --skip={{skip}}
+
 # Open the TPC-H heatmap report in a browser (latest run)
 [group('tpch')]
 tpch-report:

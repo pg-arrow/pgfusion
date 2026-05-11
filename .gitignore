@@ -37,6 +37,10 @@ benches/clickbench/results.csv
 benches/tpch/data_sf1/
 benches/tpch/tpch-dbgen/
 
+# Benchmark staging output (temp files during run)
+benches/tpch/.output_staging/
+benches/clickbench/.output_staging/
+
 # Test output/results
 tests/consistency/results.txt
 tests/sql_correctness/results.txt

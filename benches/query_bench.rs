@@ -626,7 +626,7 @@ fn raw_read_pages_arrow(db_id: Oid, table_name: &str) -> usize {
             let offset = i * PAGE_BUFFER_SIZE;
             let page_bytes = bulk_bytes.slice(offset..offset + PAGE_BUFFER_SIZE);
             let page = HeapPageData::parse_bytes(page_bytes).unwrap();
-            let batch = page.to_record_batch(schema, None).unwrap();
+            let batch = page.to_record_batch(schema, None, None).unwrap();
             total_rows += batch.num_rows();
         }
         start += pages_read;
@@ -657,7 +657,7 @@ fn raw_read_pages_arrow_projected(db_id: Oid, table_name: &str, projection: &[us
             let offset = i * PAGE_BUFFER_SIZE;
             let page_bytes = bulk_bytes.slice(offset..offset + PAGE_BUFFER_SIZE);
             let page = HeapPageData::parse_bytes(page_bytes).unwrap();
-            let batch = page.to_record_batch(schema, Some(projection)).unwrap();
+            let batch = page.to_record_batch(schema, Some(projection), None).unwrap();
             total_rows += batch.num_rows();
         }
         start += pages_read;

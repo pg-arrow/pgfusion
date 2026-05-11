@@ -1,52 +1,51 @@
 # pgfusion
 
-A SQL query engine that reads PostgreSQL data files directly. Built on [Apache DataFusion](https://datafusion.apache.org/) and [pg_arrow](../pg_arrow/).
+SQL query engine that reads PostgreSQL data files directly, without a running server. Built on [Apache DataFusion](https://datafusion.apache.org/) and [pg_arrow](../pg_arrow/).
 
 [![asciicast](https://asciinema.org/a/sIhowFJ7Mf8b4Hzk.svg)](https://asciinema.org/a/sIhowFJ7Mf8b4Hzk)
 
-## How it works
-
-pgfusion points at a PostgreSQL data directory (`PGDATA`), discovers all tables via the system catalog, and registers them as DataFusion table providers. Queries are planned and executed by DataFusion; page reads and tuple decoding are handled by `pg_arrow`. Each table scan is partitioned across parallel ranges for concurrent reads.
-
-## Use Cases
-
-- **Backup analysis** — query PostgreSQL backups without restoring them
-- **Offline analytics** — run OLAP queries on data directory copies without impacting production
-- **Development** — analyze production data snapshots locally
-- **Forensics** — inspect PostgreSQL data files at the page/tuple level
-
-## Prerequisites
-
-- **Rust** — [rustup.rs](https://rustup.rs)
-- **just** — command runner
-
-```bash
-brew install just          # macOS
-cargo install just         # other platforms
-```
+Reads `PGDATA` directly, discovers tables from the system catalog, and runs SQL via DataFusion. Page reads and tuple decoding are handled by `pg_arrow`. Scans are partitioned across page ranges for parallel execution.
 
 ## Quick start
 
-```bash
-# Interactive REPL
-just cli /path/to/pgdata
-
-# Single query with timing
-just query /path/to/pgdata "SELECT count(*) FROM my_table"
-
-# Execute queries from a file
-just query-file /path/to/pgdata queries.sql
-```
-
-## Docker
+Requires [Rust](https://rustup.rs) and [just](https://github.com/casey/just).
 
 ```bash
-just docker-build
-PGDATA_PATH=/path/to/pgdata just compose-cli
-PGDATA_PATH=/path/to/pgdata just compose-query "SELECT count(*) FROM hits"
-PGDATA_PATH=/path/to/pgdata just compose-server
-just compose-down
+just cli /path/to/pgdata                                  # interactive REPL
+just query /path/to/pgdata "SELECT count(*) FROM orders"  # single query
+just query-file /path/to/pgdata queries.sql               # from file
 ```
+
+## Consistency
+
+By default pgfusion reads raw heap files with no MVCC filtering — dead tuples may appear and unflushed writes may be missing.
+
+**Against a live database** — use `--checkpoint` (flushes dirty pages) and `--consistent` (REPEATABLE READ snapshot for xmin visibility):
+
+```bash
+# Unix socket (default PostgreSQL setup)
+pgfusion_cli -d /path/to/pgdata --db-id 16384 \
+  --pg-url "host=/tmp port=5432 dbname=mydb user=myuser" \
+  --checkpoint --consistent \
+  -c "SELECT count(*) FROM orders"
+
+# TCP
+pgfusion_cli -d /path/to/pgdata --db-id 16384 \
+  --pg-url "host=localhost port=5432 dbname=mydb user=myuser password=secret" \
+  --checkpoint --consistent \
+  -c "SELECT count(*) FROM orders"
+```
+
+**Offline** — run `CHECKPOINT` and `VACUUM` before stopping PostgreSQL, or just do a clean shutdown. pgfusion will see consistent data without `--consistent`.
+
+| Flag | Description |
+|---|---|
+| `--pg-url <url>` | PostgreSQL connection string — required for the flags below |
+| `--checkpoint` | Run `CHECKPOINT` before each query to flush dirty pages |
+| `--consistent` | Acquire a REPEATABLE READ snapshot per query for MVCC visibility |
+| `--debug-timing` | Print timing for each phase: connect, snapshot, query, rollback |
+
+`\debug` toggles debug timing in the REPL.
 
 ## Library usage
 
@@ -85,20 +84,30 @@ just tpch pg18                # run all 22 queries vs PostgreSQL
 just tpch-report              # open latest heatmap in browser
 ```
 
+Both runners share `benches/bench_lib.sh` for query execution, timing, and checkpoint management.
+
 ## Testing
 
 ```bash
 just test                     # unit tests
 just test-sql pg18            # SQL correctness tests
-just test-consistency pg18    # consistency tests vs live PostgreSQL
+just test-consistency pg18    # consistency vs live PostgreSQL (uses --consistent)
 ```
 
-## Common commands
+## Docker
+
+```bash
+just docker-build
+PGDATA_PATH=/path/to/pgdata just compose-cli
+PGDATA_PATH=/path/to/pgdata just compose-query "SELECT count(*) FROM hits"
+just compose-down
+```
+
+## Commands
 
 ```bash
 just build        # debug build
 just release      # release build
 just bench        # Criterion benchmarks
-just flamegraph /pgdata "SELECT count(*) FROM hits"
-just --list       # all available recipes
+just --list       # all recipes
 ```
