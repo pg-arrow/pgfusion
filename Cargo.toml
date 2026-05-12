@@ -53,10 +53,14 @@ arrow-flight = { version = "=58.0.0", features = ["flight-sql"] }
 criterion = { version = "0.6", features = ["async_tokio"] }
 pg-test-harness = { git = "ssh://git@github.com/pg-arrow/utils.git", rev = "2eb4d339686830b650e161ef1b68e01cea4601ef" }
 tonic = "0.14.6"
+insta = { version = "1", features = ["glob"] }
 
 [[bench]]
 name = "query_bench"
 harness = false
+
+[profile.coverage]
+inherits = "test"
 
 [profile.release]
 debug = true

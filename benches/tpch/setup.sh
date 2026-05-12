@@ -127,10 +127,11 @@ fi
 if "$PSQL" -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME"; then
   log_info "Database '$DB_NAME' already exists"
   ROW_COUNT=$("$PSQL" -t -A -c "SELECT COUNT(*) FROM lineitem;" "$DB_NAME" 2>/dev/null || echo "0")
-  if [ "$ROW_COUNT" -gt 0 ] 2>/dev/null; then
-    log_ok "Table 'lineitem' has $ROW_COUNT rows — skipping load"
+  EXPECTED_MIN=$(( SCALE_FACTOR * 5000000 ))
+  if [ "$ROW_COUNT" -gt "$EXPECTED_MIN" ] 2>/dev/null; then
+    log_ok "Table 'lineitem' has $ROW_COUNT rows (SF$SCALE_FACTOR) — skipping load"
   else
-    log_info "Tables empty or missing, loading data..."
+    log_info "lineitem has $ROW_COUNT rows, expected ~$(( SCALE_FACTOR * 6000000 )) for SF$SCALE_FACTOR — reloading..."
     "$PSQL" "$DB_NAME" <"$SCRIPT_DIR/create.sql"
     load_tables
   fi
