@@ -30,6 +30,10 @@ flamegraph.svg
 perf.data
 perf.data.old
 
+# Coverage artifacts
+lcov.info
+coverage/
+
 # TPC-H: generated data, dbgen binary, run output
 # heatmap.html and checkpoints/current/ are kept (reference report + latest results)
 benches/tpch/data_sf*/
@@ -51,4 +55,8 @@ tests/sql_correctness/results.txt
 
 # Large snapshots (full-table dumps, ~100k rows — not useful as diffs)
 tests/sql_correctness/snapshots/query_extreme_values__6.snap
+tests/sql_correctness/snapshots/query_memory_bound__1.snap
 tests/sql_correctness/snapshots/query_memory_bound__2.snap
+tests/sql_correctness/snapshots/query_compute_bound__1.snap
+tests/sql_correctness/snapshots/query_compute_bound__3.snap
+tests/sql_correctness/snapshots/query_compute_bound__5.snap

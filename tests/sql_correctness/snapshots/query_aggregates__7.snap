@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT MIN(abalance), MAX(abalance), AVG(abalance) FROM pgbench_accounts
+
++--------------------------------+--------------------------------+--------------------------------+
+| min(pgbench_accounts.abalance) | max(pgbench_accounts.abalance) | avg(pgbench_accounts.abalance) |
++--------------------------------+--------------------------------+--------------------------------+
+| 0                              | 77777                          | 0.7778322265781262             |
++--------------------------------+--------------------------------+--------------------------------+

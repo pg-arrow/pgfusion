@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT AVG(txn_count) AS mean_txns,        MIN(txn_count) AS min_txns,        MAX(txn_count) AS max_txns,        STDDEV(txn_count) AS stddev_txns FROM (     SELECT tid, COUNT(*) AS txn_count     FROM pgbench_history     GROUP BY tid ) per_teller
+
++-----------+----------+----------+-------------+
+| mean_txns | min_txns | max_txns | stddev_txns |
++-----------+----------+----------+-------------+
+|           |          |          |             |
++-----------+----------+----------+-------------+

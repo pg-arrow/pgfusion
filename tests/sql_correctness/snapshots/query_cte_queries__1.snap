@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: WITH branch_stats AS (     SELECT bid,            COUNT(*) AS num_accounts,            SUM(abalance) AS total_balance,            AVG(abalance) AS avg_balance,            MIN(abalance) AS min_balance,            MAX(abalance) AS max_balance     FROM pgbench_accounts     GROUP BY bid ) SELECT b.bid, b.bbalance, s.num_accounts, s.total_balance, s.avg_balance FROM pgbench_branches b JOIN branch_stats s ON b.bid = s.bid ORDER BY s.total_balance DESC
+
++-----+----------+--------------+---------------+--------------------+
+| bid | bbalance | num_accounts | total_balance | avg_balance        |
++-----+----------+--------------+---------------+--------------------+
+| 1   | 0        | 99992        | 77777         | 0.7778322265781262 |
++-----+----------+--------------+---------------+--------------------+

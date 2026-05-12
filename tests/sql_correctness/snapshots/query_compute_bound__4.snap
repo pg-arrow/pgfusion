@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT bid,        COUNT(*) AS cnt,        SUM(abalance) AS sum_bal,        AVG(abalance) AS avg_bal,        MIN(abalance) AS min_bal,        MAX(abalance) AS max_bal,        STDDEV(CAST(abalance AS DOUBLE)) AS stddev_bal,        SUM(CASE WHEN abalance > 0 THEN 1 ELSE 0 END) AS pos_count,        SUM(CASE WHEN abalance < 0 THEN 1 ELSE 0 END) AS neg_count,        SUM(CASE WHEN abalance = 0 THEN 1 ELSE 0 END) AS zero_count,        SUM(ABS(abalance)) AS total_abs_balance FROM pgbench_accounts GROUP BY bid ORDER BY bid
+
++-----+-------+---------+--------------------+---------+---------+--------------------+-----------+-----------+------------+-------------------+
+| bid | cnt   | sum_bal | avg_bal            | min_bal | max_bal | stddev_bal         | pos_count | neg_count | zero_count | total_abs_balance |
++-----+-------+---------+--------------------+---------+---------+--------------------+-----------+-----------+------------+-------------------+
+| 1   | 99992 | 77777   | 0.7778322265781262 | 0       | 77777   | 245.96230826402424 | 1         | 0         | 99991      | 77777             |
++-----+-------+---------+--------------------+---------+---------+--------------------+-----------+-----------+------------+-------------------+

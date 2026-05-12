@@ -107,21 +107,23 @@ test-consistency-no-checkpoint:
 test-all: test-sql test-consistency
 
 # Code coverage — integration tests (requires cargo-llvm-cov)
+# RUSTFLAGS=-C instrument-coverage ensures pg_arrow (path dep) is also instrumented
 [group('test')]
 coverage:
-    cargo llvm-cov nextest \
-        --test sql_correctness --test consistency \
-        --ignore-filename-regex 'tests/|src/server/' \
-        --lcov --output-path lcov.info
-    cargo llvm-cov report --html --output-dir coverage/
+    RUSTFLAGS="-C instrument-coverage" cargo llvm-cov nextest \
+        -P consistency --test consistency --no-report
+    cargo llvm-cov report \
+        --ignore-filename-regex 'tests/|src/server/|\.cargo|rustup' \
+        --html --output-dir coverage/
 
 # Code coverage — unit/lib tests only (fast, no PG needed)
 [group('test')]
 coverage-unit:
-    cargo llvm-cov nextest --lib \
-        --ignore-filename-regex 'tests/|src/server/' \
-        --lcov --output-path lcov.info
-    cargo llvm-cov report --html --output-dir coverage/
+    RUSTFLAGS="-C instrument-coverage" cargo llvm-cov nextest --lib \
+        --no-report
+    cargo llvm-cov report \
+        --ignore-filename-regex 'tests/|src/server/|\.cargo|rustup' \
+        --html --output-dir coverage/
 
 # ── Benchmarks ────────────────────────────────────────────────────────────────
 

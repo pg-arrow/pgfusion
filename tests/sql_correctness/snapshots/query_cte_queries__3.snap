@@ -1,0 +1,20 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: WITH ranked_tellers AS (     SELECT t.tid, t.bid, t.tbalance,            RANK() OVER (PARTITION BY t.bid ORDER BY t.tbalance DESC) AS rnk     FROM pgbench_tellers t ) SELECT r.tid, r.bid, r.tbalance, r.rnk, b.bbalance FROM ranked_tellers r JOIN pgbench_branches b ON r.bid = b.bid WHERE r.rnk = 1 ORDER BY r.bid
+
++-----+-----+----------+-----+----------+
+| tid | bid | tbalance | rnk | bbalance |
++-----+-----+----------+-----+----------+
+| 1   | 1   | 0        | 1   | 0        |
+| 2   | 1   | 0        | 1   | 0        |
+| 3   | 1   | 0        | 1   | 0        |
+| 4   | 1   | 0        | 1   | 0        |
+| 5   | 1   | 0        | 1   | 0        |
+| 6   | 1   | 0        | 1   | 0        |
+| 7   | 1   | 0        | 1   | 0        |
+| 8   | 1   | 0        | 1   | 0        |
+| 9   | 1   | 0        | 1   | 0        |
+| 10  | 1   | 0        | 1   | 0        |
++-----+-----+----------+-----+----------+

@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT size_class, COUNT(*) AS num_branches, SUM(account_count) AS total_accounts FROM (     SELECT bid,            COUNT(*) AS account_count,            CASE WHEN COUNT(*) > 1000 THEN 'large' ELSE 'small' END AS size_class     FROM pgbench_accounts     GROUP BY bid ) classified GROUP BY size_class ORDER BY size_class
+
++------------+--------------+----------------+
+| size_class | num_branches | total_accounts |
++------------+--------------+----------------+
+| large      | 1            | 99992          |
++------------+--------------+----------------+

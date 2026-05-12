@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT bid, COUNT(*) AS num_accounts, SUM(abalance) AS total_balance, AVG(abalance) AS avg_balance FROM pgbench_accounts GROUP BY bid ORDER BY bid
+
++-----+--------------+---------------+--------------------+
+| bid | num_accounts | total_balance | avg_balance        |
++-----+--------------+---------------+--------------------+
+| 1   | 99992        | 77777         | 0.7778322265781262 |
++-----+--------------+---------------+--------------------+

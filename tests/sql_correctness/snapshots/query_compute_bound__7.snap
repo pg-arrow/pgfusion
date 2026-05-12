@@ -1,0 +1,12 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT     CASE         WHEN abalance % 10 = 0 THEN 'mod10_0'         WHEN abalance % 10 < 5 THEN 'mod10_low'         ELSE                        'mod10_high'     END AS bucket,     COUNT(*) AS cnt,     AVG(abalance) AS avg_bal FROM pgbench_accounts GROUP BY     CASE         WHEN abalance % 10 = 0 THEN 'mod10_0'         WHEN abalance % 10 < 5 THEN 'mod10_low'         ELSE                        'mod10_high'     END ORDER BY bucket
+
++------------+-------+---------+
+| bucket     | cnt   | avg_bal |
++------------+-------+---------+
+| mod10_0    | 99991 | 0.0     |
+| mod10_high | 1     | 77777.0 |
++------------+-------+---------+

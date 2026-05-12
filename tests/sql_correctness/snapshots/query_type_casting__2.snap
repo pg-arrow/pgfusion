@@ -1,0 +1,15 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT aid,        CAST(aid AS VARCHAR) AS aid_str,        CAST(aid AS BIGINT) AS aid_bigint,        CAST(aid AS DOUBLE) AS aid_double FROM pgbench_accounts WHERE aid <= 5 ORDER BY aid
+
++-----+---------+------------+------------+
+| aid | aid_str | aid_bigint | aid_double |
++-----+---------+------------+------------+
+| 1   | 1       | 1          | 1.0        |
+| 2   | 2       | 2          | 2.0        |
+| 3   | 3       | 3          | 3.0        |
+| 4   | 4       | 4          | 4.0        |
+| 5   | 5       | 5          | 5.0        |
++-----+---------+------------+------------+

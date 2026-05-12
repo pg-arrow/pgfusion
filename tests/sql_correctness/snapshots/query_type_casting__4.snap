@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT aid, abalance,        CAST(abalance AS BIGINT) * 1000000 AS scaled_up,        CAST(abalance AS DOUBLE) / 3.0 AS third FROM pgbench_accounts WHERE abalance != 0 ORDER BY ABS(abalance) DESC LIMIT 20
+
++-------+----------+-------------+--------------------+
+| aid   | abalance | scaled_up   | third              |
++-------+----------+-------------+--------------------+
+| 99906 | 77777    | 77777000000 | 25925.666666666668 |
++-------+----------+-------------+--------------------+

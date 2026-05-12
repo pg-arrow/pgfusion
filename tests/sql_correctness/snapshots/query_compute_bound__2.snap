@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT aid, abalance,        SQRT(CAST(ABS(abalance) + 1 AS DOUBLE)) AS sqrt_bal,        LN(CAST(ABS(abalance) + 1 AS DOUBLE)) AS ln_bal,        POWER(CAST(ABS(abalance) AS DOUBLE), 0.5) AS power_half,        EXP(CAST(abalance AS DOUBLE) / 100000.0) AS exp_scaled FROM pgbench_accounts WHERE abalance != 0 ORDER BY aid
+
++-------+----------+--------------------+--------------------+--------------------+-------------------+
+| aid   | abalance | sqrt_bal           | ln_bal             | power_half         | exp_scaled        |
++-------+----------+--------------------+--------------------+--------------------+-------------------+
+| 99906 | 77777    | 278.88707392061036 | 11.261613893828098 | 278.88528107449486 | 2.176613002438171 |
++-------+----------+--------------------+--------------------+--------------------+-------------------+

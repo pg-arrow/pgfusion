@@ -1,0 +1,30 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT a.aid, a.abalance,        CASE WHEN a.abalance > 0 THEN 'true' ELSE 'false' END AS is_positive,        CASE WHEN a.abalance = 0 THEN 'true' ELSE 'false' END AS is_zero,        CASE WHEN h.aid IS NOT NULL THEN 'true' ELSE 'false' END AS has_history FROM pgbench_accounts a LEFT JOIN (SELECT DISTINCT aid FROM pgbench_history) h ON a.aid = h.aid WHERE a.aid <= 20 ORDER BY a.aid
+
++-----+----------+-------------+---------+-------------+
+| aid | abalance | is_positive | is_zero | has_history |
++-----+----------+-------------+---------+-------------+
+| 1   | 0        | false       | true    | false       |
+| 2   | 0        | false       | true    | false       |
+| 3   | 0        | false       | true    | false       |
+| 4   | 0        | false       | true    | false       |
+| 5   | 0        | false       | true    | false       |
+| 6   | 0        | false       | true    | false       |
+| 7   | 0        | false       | true    | false       |
+| 8   | 0        | false       | true    | false       |
+| 9   | 0        | false       | true    | false       |
+| 10  | 0        | false       | true    | false       |
+| 11  | 0        | false       | true    | false       |
+| 12  | 0        | false       | true    | false       |
+| 13  | 0        | false       | true    | false       |
+| 14  | 0        | false       | true    | false       |
+| 15  | 0        | false       | true    | false       |
+| 16  | 0        | false       | true    | false       |
+| 17  | 0        | false       | true    | false       |
+| 18  | 0        | false       | true    | false       |
+| 19  | 0        | false       | true    | false       |
+| 20  | 0        | false       | true    | false       |
++-----+----------+-------------+---------+-------------+

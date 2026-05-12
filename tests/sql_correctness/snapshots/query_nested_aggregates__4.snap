@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: WITH branch_counts AS (     SELECT bid, COUNT(*) AS cnt     FROM pgbench_accounts     GROUP BY bid ) SELECT bid, cnt,        cnt - (SELECT AVG(cnt) FROM branch_counts) AS deviation_from_avg FROM branch_counts ORDER BY deviation_from_avg DESC
+
++-----+-------+--------------------+
+| bid | cnt   | deviation_from_avg |
++-----+-------+--------------------+
+| 1   | 99992 | 0.0                |
++-----+-------+--------------------+

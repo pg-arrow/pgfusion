@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT AVG(account_count) AS avg_accounts_per_branch,        MIN(account_count) AS min_accounts,        MAX(account_count) AS max_accounts FROM (     SELECT bid, COUNT(*) AS account_count     FROM pgbench_accounts     GROUP BY bid ) per_branch
+
++-------------------------+--------------+--------------+
+| avg_accounts_per_branch | min_accounts | max_accounts |
++-------------------------+--------------+--------------+
+| 99992.0                 | 99992        | 99992        |
++-------------------------+--------------+--------------+

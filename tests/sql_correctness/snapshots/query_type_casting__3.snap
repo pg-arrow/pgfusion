@@ -1,0 +1,20 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT aid, abalance,        abalance * 1.05 AS balance_with_interest,        abalance * 0.10 AS ten_pct,        abalance % 100 AS last_two_digits FROM pgbench_accounts WHERE aid <= 10 ORDER BY aid
+
++-----+----------+-----------------------+---------+-----------------+
+| aid | abalance | balance_with_interest | ten_pct | last_two_digits |
++-----+----------+-----------------------+---------+-----------------+
+| 1   | 0        | 0.0                   | 0.0     | 0               |
+| 2   | 0        | 0.0                   | 0.0     | 0               |
+| 3   | 0        | 0.0                   | 0.0     | 0               |
+| 4   | 0        | 0.0                   | 0.0     | 0               |
+| 5   | 0        | 0.0                   | 0.0     | 0               |
+| 6   | 0        | 0.0                   | 0.0     | 0               |
+| 7   | 0        | 0.0                   | 0.0     | 0               |
+| 8   | 0        | 0.0                   | 0.0     | 0               |
+| 9   | 0        | 0.0                   | 0.0     | 0               |
+| 10  | 0        | 0.0                   | 0.0     | 0               |
++-----+----------+-----------------------+---------+-----------------+
