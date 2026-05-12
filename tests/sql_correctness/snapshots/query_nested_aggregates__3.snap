@@ -1,0 +1,8 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: WITH per_teller AS (     SELECT bid, tid, COUNT(*) AS txn_count     FROM pgbench_history     GROUP BY bid, tid ), per_branch AS (     SELECT bid,            AVG(txn_count) AS avg_teller_txns,            MAX(txn_count) AS max_teller_txns     FROM per_teller     GROUP BY bid ) SELECT bid, avg_teller_txns, max_teller_txns FROM per_branch ORDER BY avg_teller_txns DESC
+
+++
+++

@@ -1,0 +1,60 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT bid FROM pgbench_accounts UNION ALL SELECT bid FROM pgbench_tellers ORDER BY bid LIMIT 50
+
++-----+
+| bid |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
++-----+

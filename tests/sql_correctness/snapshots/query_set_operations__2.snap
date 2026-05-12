@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT bid FROM pgbench_accounts INTERSECT SELECT bid FROM pgbench_tellers
+
++-----+
+| bid |
++-----+
+| 1   |
++-----+

@@ -1,0 +1,8 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT a.aid, a.abalance FROM pgbench_accounts a WHERE a.abalance > (SELECT AVG(abalance) FROM pgbench_accounts) ORDER BY a.abalance DESC LIMIT 20
+
+++
+++

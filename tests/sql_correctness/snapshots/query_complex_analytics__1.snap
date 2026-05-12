@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT     CASE         WHEN abalance < -1000 THEN 'very_negative'         WHEN abalance < 0     THEN 'negative'         WHEN abalance = 0     THEN 'zero'         WHEN abalance < 1000  THEN 'positive'         ELSE                       'very_positive'     END AS balance_bucket,     COUNT(*) AS num_accounts,     MIN(abalance) AS min_bal,     MAX(abalance) AS max_bal FROM pgbench_accounts GROUP BY     CASE         WHEN abalance < -1000 THEN 'very_negative'         WHEN abalance < 0     THEN 'negative'         WHEN abalance = 0     THEN 'zero'         WHEN abalance < 1000  THEN 'positive'         ELSE                       'very_positive'     END ORDER BY min_bal
+
++----------------+--------------+---------+---------+
+| balance_bucket | num_accounts | min_bal | max_bal |
++----------------+--------------+---------+---------+
+| zero           | 98991        | 0       | 0       |
++----------------+--------------+---------+---------+

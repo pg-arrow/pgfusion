@@ -1,0 +1,15 @@
+[profile.default]
+# No retries — flaky consistency tests must be fixed, not hidden.
+retries = 0
+
+# Per-test-binary thread counts are set via profile overrides below.
+# Consistency tests share pgbench_accounts rows and must run serially.
+# SQL correctness tests are read-only and can run fully parallel.
+
+[profile.consistency]
+retries = 0
+test-threads = 1
+
+[profile.sql]
+retries = 0
+test-threads = "num-cpus"

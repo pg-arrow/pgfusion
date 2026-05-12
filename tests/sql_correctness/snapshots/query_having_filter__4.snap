@@ -1,0 +1,8 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT bid,        COUNT(*) AS txn_count,        SUM(delta) AS total_delta,        AVG(delta) AS avg_delta FROM pgbench_history GROUP BY bid HAVING COUNT(*) > 10 AND ABS(SUM(delta)) > 100 ORDER BY txn_count DESC
+
+++
+++

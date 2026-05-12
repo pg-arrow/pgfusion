@@ -1,0 +1,8 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT bid, COUNT(*) AS nonzero_count, SUM(abalance) AS total_nonzero FROM pgbench_accounts WHERE abalance != 0 GROUP BY bid HAVING COUNT(*) > 5 ORDER BY nonzero_count DESC
+
+++
+++

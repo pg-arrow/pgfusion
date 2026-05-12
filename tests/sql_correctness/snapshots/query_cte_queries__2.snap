@@ -1,0 +1,8 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: WITH hot_accounts AS (     SELECT aid, COUNT(*) AS txn_count, SUM(delta) AS net_delta     FROM pgbench_history     GROUP BY aid     HAVING COUNT(*) > 1 ), account_info AS (     SELECT a.aid, a.bid, a.abalance, h.txn_count, h.net_delta     FROM pgbench_accounts a     JOIN hot_accounts h ON a.aid = h.aid ) SELECT ai.bid, COUNT(*) AS hot_count, AVG(ai.txn_count) AS avg_txns FROM account_info ai GROUP BY ai.bid ORDER BY hot_count DESC
+
+++
+++

@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT bid,        MIN(abalance) AS min_balance,        MAX(abalance) AS max_balance,        MAX(abalance) - MIN(abalance) AS balance_range FROM pgbench_accounts GROUP BY bid ORDER BY balance_range DESC
+
++-----+-------------+-------------+---------------+
+| bid | min_balance | max_balance | balance_range |
++-----+-------------+-------------+---------------+
+| 1   | 0           | 0           | 0             |
++-----+-------------+-------------+---------------+

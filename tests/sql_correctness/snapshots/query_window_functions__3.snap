@@ -1,0 +1,8 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT bid,        SUM(delta) OVER (PARTITION BY bid ORDER BY mtime) AS running_delta,        COUNT(*) OVER (PARTITION BY bid ORDER BY mtime) AS running_count FROM pgbench_history ORDER BY bid, mtime LIMIT 50
+
+++
+++

@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT COUNT(*) AS non_null_fillers FROM pgbench_accounts WHERE filler IS NOT NULL
+
++------------------+
+| non_null_fillers |
++------------------+
+| 98991            |
++------------------+

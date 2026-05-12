@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT bid, COUNT(*) AS num_accounts FROM pgbench_accounts GROUP BY bid HAVING COUNT(*) > 50 ORDER BY num_accounts DESC
+
++-----+--------------+
+| bid | num_accounts |
++-----+--------------+
+| 1   | 98991        |
++-----+--------------+

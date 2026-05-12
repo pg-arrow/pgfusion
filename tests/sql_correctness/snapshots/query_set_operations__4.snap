@@ -1,0 +1,8 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT DISTINCT bid, abalance FROM pgbench_accounts WHERE abalance != 0 ORDER BY bid, abalance LIMIT 50
+
+++
+++

@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT aid, bid, abalance FROM pgbench_accounts ORDER BY aid ASC LIMIT 1
+
++-----+-----+----------+
+| aid | bid | abalance |
++-----+-----+----------+
+| 1   | 1   | 0        |
++-----+-----+----------+

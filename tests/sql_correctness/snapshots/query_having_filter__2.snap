@@ -1,0 +1,8 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT bid, AVG(abalance) AS avg_balance, COUNT(*) AS num_accounts FROM pgbench_accounts GROUP BY bid HAVING AVG(abalance) < 0 ORDER BY avg_balance
+
+++
+++

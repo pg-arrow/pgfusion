@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT bid,        COUNT(*) AS total,        SUM(CASE WHEN abalance > 0 THEN 1 ELSE 0 END) AS positive_count,        SUM(CASE WHEN abalance = 0 THEN 1 ELSE 0 END) AS zero_count,        SUM(CASE WHEN abalance < 0 THEN 1 ELSE 0 END) AS negative_count FROM pgbench_accounts GROUP BY bid ORDER BY bid
+
++-----+-------+----------------+------------+----------------+
+| bid | total | positive_count | zero_count | negative_count |
++-----+-------+----------------+------------+----------------+
+| 1   | 98991 | 0              | 98991      | 0              |
++-----+-------+----------------+------------+----------------+

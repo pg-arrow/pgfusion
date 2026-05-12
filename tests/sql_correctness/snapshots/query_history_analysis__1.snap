@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT COUNT(*) FROM pgbench_history
+
++----------+
+| count(*) |
++----------+
+| 0        |
++----------+

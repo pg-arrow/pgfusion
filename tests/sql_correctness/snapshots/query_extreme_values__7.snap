@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT DISTINCT bid,        FIRST_VALUE(aid) OVER (PARTITION BY bid ORDER BY aid ASC            ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS first_aid,        LAST_VALUE(aid) OVER (PARTITION BY bid ORDER BY aid ASC            ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS last_aid,        FIRST_VALUE(abalance) OVER (PARTITION BY bid ORDER BY aid ASC            ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS first_balance,        LAST_VALUE(abalance) OVER (PARTITION BY bid ORDER BY aid ASC            ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS last_balance FROM pgbench_accounts ORDER BY bid
+
++-----+-----------+----------+---------------+--------------+
+| bid | first_aid | last_aid | first_balance | last_balance |
++-----+-----------+----------+---------------+--------------+
+| 1   | 1         | 100000   | 0             | 0            |
++-----+-----------+----------+---------------+--------------+

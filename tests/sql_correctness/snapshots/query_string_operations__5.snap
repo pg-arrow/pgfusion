@@ -1,0 +1,20 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT aid,        UPPER('branch_' || CAST(bid AS VARCHAR)) AS upper_label,        LOWER('ACCOUNT_' || CAST(aid AS VARCHAR)) AS lower_label FROM pgbench_accounts WHERE aid <= 10 ORDER BY aid
+
++-----+-------------+-------------+
+| aid | upper_label | lower_label |
++-----+-------------+-------------+
+| 1   | BRANCH_1    | account_1   |
+| 2   | BRANCH_1    | account_2   |
+| 3   | BRANCH_1    | account_3   |
+| 4   | BRANCH_1    | account_4   |
+| 5   | BRANCH_1    | account_5   |
+| 6   | BRANCH_1    | account_6   |
+| 7   | BRANCH_1    | account_7   |
+| 8   | BRANCH_1    | account_8   |
+| 9   | BRANCH_1    | account_9   |
+| 10  | BRANCH_1    | account_10  |
++-----+-------------+-------------+

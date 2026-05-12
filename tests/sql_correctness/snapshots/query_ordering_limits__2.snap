@@ -1,0 +1,20 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT aid, abalance FROM pgbench_accounts ORDER BY aid OFFSET 100 LIMIT 10
+
++-----+----------+
+| aid | abalance |
++-----+----------+
+| 101 | 0        |
+| 102 | 0        |
+| 103 | 0        |
+| 104 | 0        |
+| 105 | 0        |
+| 106 | 0        |
+| 107 | 0        |
+| 108 | 0        |
+| 109 | 0        |
+| 110 | 0        |
++-----+----------+

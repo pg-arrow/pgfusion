@@ -1,0 +1,8 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT tid, delta,        NTILE(4) OVER (ORDER BY delta) AS quartile,        PERCENT_RANK() OVER (ORDER BY delta) AS pct_rank FROM pgbench_history LIMIT 100
+
+++
+++

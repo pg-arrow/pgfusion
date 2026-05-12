@@ -23,29 +23,20 @@ By default pgfusion reads raw heap files with no MVCC filtering — dead tuples 
 **Against a live database** — use `--checkpoint` (flushes dirty pages) and `--consistent` (REPEATABLE READ snapshot for xmin visibility):
 
 ```bash
-# Unix socket (default PostgreSQL setup)
 pgfusion_cli -d /path/to/pgdata --db-id 16384 \
   --pg-url "host=/tmp port=5432 dbname=mydb user=myuser" \
   --checkpoint --consistent \
   -c "SELECT count(*) FROM orders"
-
-# TCP
-pgfusion_cli -d /path/to/pgdata --db-id 16384 \
-  --pg-url "host=localhost port=5432 dbname=mydb user=myuser password=secret" \
-  --checkpoint --consistent \
-  -c "SELECT count(*) FROM orders"
 ```
-
-**Offline** — run `CHECKPOINT` and `VACUUM` before stopping PostgreSQL, or just do a clean shutdown. pgfusion will see consistent data without `--consistent`.
 
 | Flag | Description |
 |---|---|
-| `--pg-url <url>` | PostgreSQL connection string — required for the flags below |
+| `--pg-url <url>` | PostgreSQL connection string |
 | `--checkpoint` | Run `CHECKPOINT` before each query to flush dirty pages |
 | `--consistent` | Acquire a REPEATABLE READ snapshot per query for MVCC visibility |
-| `--debug-timing` | Print timing for each phase: connect, snapshot, query, rollback |
+| `--debug-timing` | Print timing for each phase |
 
-`\debug` toggles debug timing in the REPL.
+**Offline** — run `CHECKPOINT` and `VACUUM` before stopping PostgreSQL, or do a clean shutdown.
 
 ## Library usage
 
@@ -59,6 +50,50 @@ async fn main() {
     df.show().await.unwrap();
 }
 ```
+
+## Testing
+
+### Setup (once)
+
+Install test tooling:
+
+```bash
+cargo install cargo-nextest    # parallel test runner (required)
+cargo install cargo-insta      # snapshot review tool
+cargo install cargo-llvm-cov   # coverage (optional)
+```
+
+Clone [`pg-test-harness`](https://github.com/pg-arrow/pg-test-harness) and set `PG_HARNESS_DIR`:
+
+```bash
+git clone https://github.com/pg-arrow/pg-test-harness /path/to/pg-test-harness
+export PG_HARNESS_DIR=/path/to/pg-test-harness   # add to ~/.zshrc or ~/.bashrc
+
+just pg-setup-pgbench pg18   # build PG18, init cluster, load pgbench SF=1 (~100k rows)
+just test-sql-seed           # seed SQL correctness snapshots against live PG (run once)
+```
+
+### Running tests
+
+```bash
+just test                    # unit tests (no PG needed)
+just test-sql                # SQL correctness: snapshot diff only (no PG needed)
+just test-sql-seed           # re-seed snapshots against live PG
+just test-sql-validate       # force re-validate all snapshots against live PG
+just test-consistency        # MVCC visibility tests (requires live PG)
+just test-consistency-full   # + #[ignore] tests (clog/rollback)
+just test-all                # test-sql + test-consistency
+```
+
+### Environment variables
+
+| Variable | Description |
+|---|---|
+| `PG_HARNESS_DIR` | Path to pg-test-harness clone (required for `pg-setup-*` recipes) |
+| `INSTA_SKIP_PG` | Set to skip PG connection in sql correctness tests (snapshot diff only) |
+| `INSTA_FORCE_PG_VALIDATE=1` | Force re-validate all snapshots against live PG |
+| `PG_TEST_NO_CHECKPOINT=1` | Skip CHECKPOINT in consistency tests (WAL streaming path) |
+| `PG_VERSION` | Default PostgreSQL version (`pg18`) |
 
 ## Benchmarks
 
@@ -82,16 +117,6 @@ just clickbench-report        # open latest heatmap in browser
 just tpch-setup pg18          # build dbgen and load dataset
 just tpch pg18                # run all 22 queries vs PostgreSQL
 just tpch-report              # open latest heatmap in browser
-```
-
-Both runners share `benches/bench_lib.sh` for query execution, timing, and checkpoint management.
-
-## Testing
-
-```bash
-just test                     # unit tests
-just test-sql pg18            # SQL correctness tests
-just test-consistency pg18    # consistency vs live PostgreSQL (uses --consistent)
 ```
 
 ## Docker

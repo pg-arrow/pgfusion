@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT abalance FROM pgbench_accounts WHERE aid = 1
+
++----------+
+| abalance |
++----------+
+| 0        |
++----------+

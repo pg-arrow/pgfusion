@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT bid, SUM(tbalance) AS total_teller_balance, COUNT(*) AS num_tellers FROM pgbench_tellers GROUP BY bid ORDER BY bid
+
++-----+----------------------+-------------+
+| bid | total_teller_balance | num_tellers |
++-----+----------------------+-------------+
+| 1   | 0                    | 10          |
++-----+----------------------+-------------+

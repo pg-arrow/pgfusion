@@ -1,0 +1,8 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT bid,        MAX(abalance) AS max_bal,        AVG(abalance) AS avg_bal FROM pgbench_accounts GROUP BY bid HAVING MAX(abalance) > AVG(abalance) * 10 ORDER BY bid
+
+++
+++

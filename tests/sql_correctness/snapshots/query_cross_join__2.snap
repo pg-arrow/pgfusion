@@ -1,0 +1,20 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT b.bid, t.tid, b.bbalance + t.tbalance AS combined_balance FROM pgbench_branches b, pgbench_tellers t ORDER BY b.bid, t.tid
+
++-----+-----+------------------+
+| bid | tid | combined_balance |
++-----+-----+------------------+
+| 1   | 1   | 0                |
+| 1   | 2   | 0                |
+| 1   | 3   | 0                |
+| 1   | 4   | 0                |
+| 1   | 5   | 0                |
+| 1   | 6   | 0                |
+| 1   | 7   | 0                |
+| 1   | 8   | 0                |
+| 1   | 9   | 0                |
+| 1   | 10  | 0                |
++-----+-----+------------------+

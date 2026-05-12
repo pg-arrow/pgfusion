@@ -1,0 +1,8 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT b1.bid AS bid1, b2.bid AS bid2,        b1.bbalance AS balance1, b2.bbalance AS balance2,        b1.bbalance - b2.bbalance AS balance_diff FROM pgbench_branches b1 CROSS JOIN pgbench_branches b2 WHERE b1.bid < b2.bid ORDER BY b1.bid, b2.bid
+
+++
+++

@@ -1,0 +1,8 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT aid, abalance FROM pgbench_accounts ORDER BY aid LIMIT 0
+
+++
+++

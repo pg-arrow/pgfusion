@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT b.bid, b.bbalance,        COUNT(DISTINCT a.aid) AS num_accounts,        SUM(a.abalance) AS total_account_balance,        COUNT(DISTINCT t.tid) AS num_tellers,        COUNT(h.tid) AS num_transactions FROM pgbench_branches b LEFT JOIN pgbench_accounts a ON a.bid = b.bid LEFT JOIN pgbench_tellers t ON t.bid = b.bid LEFT JOIN pgbench_history h ON h.bid = b.bid GROUP BY b.bid, b.bbalance ORDER BY b.bid
+
++-----+----------+--------------+-----------------------+-------------+------------------+
+| bid | bbalance | num_accounts | total_account_balance | num_tellers | num_transactions |
++-----+----------+--------------+-----------------------+-------------+------------------+
+| 1   | 0        | 98991        | 0                     | 10          | 0                |
++-----+----------+--------------+-----------------------+-------------+------------------+

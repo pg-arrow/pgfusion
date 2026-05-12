@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT bid FROM pgbench_branches EXCEPT SELECT DISTINCT bid FROM pgbench_history
+
++-----+
+| bid |
++-----+
+| 1   |
++-----+

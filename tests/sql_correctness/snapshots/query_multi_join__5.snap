@@ -1,0 +1,8 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT a.aid, a.bid, a.abalance FROM pgbench_accounts a WHERE EXISTS (     SELECT 1 FROM pgbench_history h WHERE h.aid = a.aid ) AND EXISTS (     SELECT 1 FROM pgbench_tellers t WHERE t.bid = a.bid     HAVING COUNT(*) > 5 ) ORDER BY a.aid LIMIT 20
+
+++
+++

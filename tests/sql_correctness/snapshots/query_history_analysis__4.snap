@@ -1,0 +1,8 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT aid, COUNT(*) AS txn_count FROM pgbench_history GROUP BY aid ORDER BY txn_count DESC LIMIT 20
+
+++
+++

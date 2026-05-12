@@ -1,0 +1,11 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT     (SELECT COUNT(*) FROM pgbench_accounts      WHERE abalance = (SELECT CAST(AVG(abalance) AS INT) FROM pgbench_accounts)     ) AS exact_avg_count,     (SELECT COUNT(*) FROM pgbench_accounts      WHERE ABS(abalance - (SELECT AVG(abalance) FROM pgbench_accounts)) <= 1     ) AS near_avg_count
+
++-----------------+----------------+
+| exact_avg_count | near_avg_count |
++-----------------+----------------+
+| 98991           | 98991          |
++-----------------+----------------+

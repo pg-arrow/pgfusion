@@ -1,0 +1,20 @@
+---
+source: tests/sql_correctness.rs
+expression: formatted
+---
+Query: SELECT t.tid, t.tbalance, b.bbalance FROM pgbench_tellers t JOIN pgbench_branches b ON t.bid = b.bid
+
++-----+----------+----------+
+| tid | tbalance | bbalance |
++-----+----------+----------+
+| 1   | 0        | 0        |
+| 2   | 0        | 0        |
+| 3   | 0        | 0        |
+| 4   | 0        | 0        |
+| 5   | 0        | 0        |
+| 6   | 0        | 0        |
+| 7   | 0        | 0        |
+| 8   | 0        | 0        |
+| 9   | 0        | 0        |
+| 10  | 0        | 0        |
++-----+----------+----------+
