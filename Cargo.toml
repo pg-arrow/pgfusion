@@ -62,6 +62,11 @@ harness = false
 [profile.coverage]
 inherits = "test"
 
+[profile.profiling]
+inherits = "release"
+debug = true    # Keep debug symbols for profiler stack traces
+strip = false   # Don't strip symbols
+
 [profile.release]
 debug = true
 opt-level = 3 # Maximize optimizations

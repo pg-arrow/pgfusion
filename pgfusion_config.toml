@@ -1,0 +1,48 @@
+# pgfusion_config.toml — default configuration for pgfusion
+# Pass with: pgfusion_cli --config pgfusion_config.toml
+# CLI flags always override values set here.
+
+[query]
+# Rows per Arrow RecordBatch. Higher = more memory, better throughput.
+# batch_size = 8192
+
+# DataFusion parallel execution tasks. 0 or unset = CPU core count.
+# target_partitions = 0
+
+# Merge small batches between operators. Disable for streaming workloads.
+# coalesce_batches = true
+
+# Max memory for query execution. Examples: "512M", "2G". Unset = unlimited.
+# memory_limit = "2G"
+
+# Directory for spill files when memory limit is exceeded.
+# temp_directory = "/tmp/pgfusion_spill"
+
+# Parallel query planning threads. 0 or unset = CPU core count.
+# planning_concurrency = 0
+
+[datasource]
+# Number of page-range partitions per heap file scan.
+# Each partition reads a contiguous range of pages in parallel.
+# Higher values increase IO parallelism; diminishing returns above CPU count.
+# partition_count = 10
+
+[connection]
+# PostgreSQL connection string for --checkpoint / --consistent features.
+# pg_url = "host=localhost dbname=mydb"
+
+# Run CHECKPOINT on PostgreSQL before each query (requires pg_url).
+# checkpoint = false
+
+# Acquire REPEATABLE READ snapshot for MVCC-consistent reads (requires pg_url).
+# consistent = false
+
+[output]
+# Print query elapsed time after each statement.
+# timing = false
+
+# Print per-phase timing: pg connect / snapshot / query / rollback.
+# debug_timing = false
+
+# String displayed for NULL values in query output (not yet wired to DataFusion format.null).
+# null_value = "NULL"

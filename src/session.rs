@@ -7,27 +7,22 @@ use pg_arrow::table::PgTableReader;
 use std::sync::Arc;
 
 /// Tuning knobs for the DataFusion session.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SessionOptions {
     /// Maximum memory for query execution (bytes). `None` = unlimited.
     pub memory_limit: Option<usize>,
     /// Target rows per RecordBatch (default: 8192).
     pub batch_size: Option<usize>,
-    /// Number of partitions for parallel execution. `None` = CPU core count.
+    /// Number of DataFusion parallel execution tasks. `None` = CPU core count.
     pub target_partitions: Option<usize>,
     /// Merge small batches between operators (default: true).
     pub coalesce_batches: Option<bool>,
-}
-
-impl Default for SessionOptions {
-    fn default() -> Self {
-        Self {
-            memory_limit: None,
-            batch_size: None,
-            target_partitions: None,
-            coalesce_batches: None,
-        }
-    }
+    /// Heap file page-range partitions per table scan (default: 10).
+    pub partition_count: Option<usize>,
+    /// Parallel query planning threads. `None` = CPU core count.
+    pub planning_concurrency: Option<usize>,
+    /// Directory for spill files when memory limit is exceeded.
+    pub temp_directory: Option<String>,
 }
 
 /// Create a `SessionContext` with all tables from the given database registered.
@@ -54,10 +49,20 @@ pub fn create_session_with_options(
     if let Some(coalesce) = opts.coalesce_batches {
         config.options_mut().execution.coalesce_batches = coalesce;
     }
+    if let Some(concurrency) = opts.planning_concurrency {
+        config.options_mut().execution.planning_concurrency = concurrency;
+    }
 
-    let ctx = if let Some(limit) = opts.memory_limit {
+    let partition_count = opts.partition_count.unwrap_or(10);
+
+    let ctx = if opts.memory_limit.is_some() || opts.temp_directory.is_some() {
         let mut rt_builder = RuntimeEnvBuilder::new();
-        rt_builder = rt_builder.with_memory_pool(Arc::new(GreedyMemoryPool::new(limit)));
+        if let Some(limit) = opts.memory_limit {
+            rt_builder = rt_builder.with_memory_pool(Arc::new(GreedyMemoryPool::new(limit)));
+        }
+        if let Some(ref dir) = opts.temp_directory {
+            rt_builder = rt_builder.with_temp_file_path(dir);
+        }
         let runtime = rt_builder.build_arc().expect("failed to build runtime env");
         SessionContext::new_with_config_rt(config, runtime)
     } else {
@@ -71,6 +76,7 @@ pub fn create_session_with_options(
             schema: Arc::new(table_details.1.to_arrow_schema()),
             pg_schema: table_details.1,
             table_metadata: table_details.0.clone(),
+            partition_count,
         };
 
         ctx.register_table(&table_details.0.relname, Arc::new(provider))

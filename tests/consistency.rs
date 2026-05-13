@@ -21,10 +21,31 @@ use pgfusion_lib::{PgSnapshot as FusionSnapshot, create_session};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/// Verify reserved test rows are absent. Fails fast with a clear message if a
+/// prior test left dirty data (e.g. due to a panic before cleanup).
+async fn assert_clean_state(client: &tokio_postgres::Client) {
+    let row = client
+        .query_one(
+            "SELECT COUNT(*) FROM pgbench_accounts \
+             WHERE (aid BETWEEN 99901 AND 99910) OR (aid BETWEEN 90001 AND 91000)",
+            &[],
+        )
+        .await
+        .expect("pre-test state check query failed");
+    let count: i64 = row.get(0);
+    assert_eq!(
+        count, 0,
+        "pre-test state check failed: {count} reserved test row(s) found in pgbench_accounts \
+         (aids 99901–99910 or 90001–91000). A previous test likely left dirty data. \
+         Run: DELETE FROM pgbench_accounts WHERE (aid BETWEEN 99901 AND 99910) OR (aid BETWEEN 90001 AND 91000);"
+    );
+}
+
 async fn setup() -> (pg_test_harness::PgConfig, SessionContext, tokio_postgres::Client) {
     let config = read_pg_config(env!("CARGO_MANIFEST_DIR"), "pg18");
     pg_arrow::file::set_data_dir(config.data_dir.clone());
     let client = connect_to(&config, "pgbench_test").await;
+    assert_clean_state(&client).await;
     let db_id = db_oid(&client, "pgbench_test").await;
     let ctx = create_session(db_id).expect("create_session failed");
     (config, ctx, client)
@@ -188,6 +209,7 @@ async fn test_parallel_transaction_not_visible() {
     let db_id = db_oid(&conn_b, "pgbench_test").await;
     let ctx = create_session(db_id).expect("create_session failed");
 
+    assert_clean_state(&conn_b).await;
     cleanup_aids(&conn_b, &[99902i32]).await;
 
     conn_a.execute("BEGIN", &[]).await.expect("BEGIN failed");
@@ -255,6 +277,7 @@ async fn test_concurrent_writers_isolation() {
     let db_id = db_oid(&conn_snap, "pgbench_test").await;
     let ctx = create_session(db_id).expect("create_session failed");
 
+    assert_clean_state(&conn_snap).await;
     cleanup_aids(&conn_snap, &[99903i32, 99904i32]).await;
 
     // A: open INSERT, not committed
@@ -344,6 +367,7 @@ async fn test_rollback_after_checkpoint_not_visible() {
     let db_id = db_oid(&conn_read, "pgbench_test").await;
     let ctx = create_session(db_id).expect("create_session failed");
 
+    assert_clean_state(&conn_read).await;
     cleanup_aids(&conn_read, &[99905i32]).await;
 
     conn_tx.execute("BEGIN", &[]).await.expect("BEGIN");
@@ -441,6 +465,7 @@ async fn test_long_running_tx_checkpoint_visibility() {
     let db_id = db_oid(&conn_obs, "pgbench_test").await;
     let ctx = create_session(db_id).expect("create_session failed");
 
+    assert_clean_state(&conn_obs).await;
     cleanup_aids(&conn_obs, &[99907i32, 99908i32]).await;
 
     // Long tx: INSERT aid=99907, keep open
@@ -660,6 +685,7 @@ async fn test_future_commit_not_visible() {
     let db_id = db_oid(&conn_snap, "pgbench_test").await;
     let ctx = create_session(db_id).expect("create_session failed");
 
+    assert_clean_state(&conn_snap).await;
     cleanup_aids(&conn_snap, &[99910i32]).await;
 
     // Acquire snapshot S before the INSERT exists

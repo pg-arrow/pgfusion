@@ -259,17 +259,18 @@ flamegraph-bench filter="":
     cargo flamegraph --bench query_bench -o flamegraph.svg -- {{filter}}
     open flamegraph.svg
 
-# Samply CPU profile for the CLI (macOS/Linux — opens in browser)
+# Samply CPU profile for the CLI at 40000 Hz (macOS/Linux — opens in browser)
 # Usage: just samply /path/to/pgdata "SELECT count(*) FROM hits"
 [group('profiling')]
 samply data_dir sql db_id="16384":
-    samply record cargo run --release --bin pgfusion_cli \
-        -- -d {{data_dir}} --db-id {{db_id}} -c {{sql}} -t
+    cargo build --profile profiling --bin pgfusion_cli
+    samply record -r 40000 ./target/profiling/pgfusion_cli \
+        -d {{data_dir}} --db-id {{db_id}} -c {{sql}} -t
 
-# Samply CPU profile for criterion benchmarks
+# Samply CPU profile for criterion benchmarks at 40000 Hz
 [group('profiling')]
 samply-bench filter="":
-    samply record cargo bench --bench query_bench -- {{filter}}
+    samply record -r 40000 cargo bench --bench query_bench -- {{filter}}
 
 # Open the last generated flamegraph
 [group('profiling')]

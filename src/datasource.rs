@@ -32,6 +32,8 @@ pub struct CustomDataSource {
     pub pg_schema: PgSchema,
     pub table_metadata: PgClass,
     pub db_id: Oid,
+    /// Number of page-range partitions for parallel heap file scans.
+    pub partition_count: usize,
 }
 
 #[derive(Debug)]
@@ -43,6 +45,7 @@ struct PgTableExec {
     properties: Arc<PlanProperties>,
     metrics: ExecutionPlanMetricsSet,
     snapshot: Option<ArrowPgSnapshot>,
+    partition_count: usize,
 }
 
 impl DisplayAs for PgTableExec {
@@ -88,11 +91,10 @@ impl ExecutionPlan for PgTableExec {
         partition: usize,
         _context: Arc<TaskContext>,
     ) -> Result<SendableRecordBatchStream> {
-        const NUM_PARTITIONS: usize = 10;
-
+        let num_partitions = self.partition_count;
         let projection = self.projections.as_ref().map(|(_, cols)| cols.clone());
         let total_pages = self.table_metadata.relpages.max(0) as usize;
-        let pages_per_partition = (total_pages + NUM_PARTITIONS - 1) / NUM_PARTITIONS.max(1);
+        let pages_per_partition = (total_pages + num_partitions - 1) / num_partitions.max(1);
         let start = partition * pages_per_partition;
         let end = ((partition + 1) * pages_per_partition).min(total_pages);
 
@@ -135,6 +137,7 @@ impl PgTableExec {
         db: Oid,
         table_metadata: PgClass,
         snapshot: Option<ArrowPgSnapshot>,
+        partition_count: usize,
     ) -> Self {
         let proj = if let Some(proj) = projections {
             let projected_schema = project_schema(&schema, projections).unwrap();
@@ -150,12 +153,13 @@ impl PgTableExec {
             projections: proj.clone(),
             properties: Arc::new(PlanProperties::new(
                 EquivalenceProperties::new(proj.unwrap().0),
-                Partitioning::RoundRobinBatch(10),
+                Partitioning::RoundRobinBatch(partition_count),
                 EmissionType::Incremental,
                 Boundedness::Bounded,
             )),
             metrics: ExecutionPlanMetricsSet::new(),
             snapshot,
+            partition_count,
         }
     }
 }
@@ -194,6 +198,7 @@ impl CustomDataSource {
             self.db_id,
             self.table_metadata.clone(),
             snapshot,
+            self.partition_count,
         )))
     }
 }
