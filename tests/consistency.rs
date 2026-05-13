@@ -9,6 +9,10 @@
 ///
 /// Reserved aids: 99901–99910, 90001–91000 (no overlap with pgbench SF1 = 100k rows).
 ///
+/// Tests share pgbench_accounts rows — must run serially.
+/// Always use: `just test-consistency` (nextest with test-threads=1).
+/// Raw `cargo test` without --test-threads=1 will produce race failures.
+///
 /// Run ignored tests (clog-dependent) with: cargo nextest run --test consistency --run-ignored all
 use arrow::array::Array;
 use arrow::record_batch::RecordBatch;
