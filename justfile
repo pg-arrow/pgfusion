@@ -268,14 +268,93 @@ samply data_dir sql db_id="16384":
         -d {{data_dir}} --db-id {{db_id}} -c {{sql}} -t
 
 # Samply CPU profile for criterion benchmarks at 40000 Hz
+# bench: queries | pipeline | config
 [group('profiling')]
-samply-bench filter="":
-    samply record -r 40000 cargo bench --bench query_bench -- {{filter}}
+samply-bench bench="queries" filter="":
+    samply record -r 40000 cargo bench --bench {{bench}} -- {{filter}}
 
 # Open the last generated flamegraph
 [group('profiling')]
 flamegraph-open:
     open flamegraph.svg
+
+# ── ClickBench ────────────────────────────────────────────────────────────────
+# Requires: PGFUSION_BENCHMARK_DIR=/path/to/pgfusion-benchmark
+
+benchmark_dir := env_var("PGFUSION_BENCHMARK_DIR")
+_bench_env := "PG_ARROW_TEST_CONFIG=" + env_var_or_default("PG_ARROW_TEST_CONFIG", justfile_directory() / "pg-test-config.toml") + " PROJECT_ROOT=" + justfile_directory()
+
+# Download and load the ClickBench hits dataset into PostgreSQL
+[group('clickbench')]
+clickbench-setup pg=pg_version:
+    cd "{{benchmark_dir}}" && env {{_bench_env}} just clickbench-setup {{pg}}
+
+# Run the 43-query comparison (pgfusion vs PostgreSQL)
+[group('clickbench')]
+clickbench pg=pg_version runs="3" query="":
+    cd "{{benchmark_dir}}" && env {{_bench_env}} just clickbench {{pg}} {{runs}} {{query}}
+
+# Run and checkpoint results
+[group('clickbench')]
+clickbench-checkpoint pg=pg_version runs="3" label="" query="":
+    cd "{{benchmark_dir}}" && env {{_bench_env}} just clickbench-checkpoint {{pg}} {{runs}} {{label}} {{query}}
+
+# Archive current results without re-running
+[group('clickbench')]
+clickbench-save label="":
+    cd "{{benchmark_dir}}" && env {{_bench_env}} just clickbench-save {{label}}
+
+# Open latest ClickBench heatmap
+[group('clickbench')]
+clickbench-report:
+    cd "{{benchmark_dir}}" && env {{_bench_env}} just clickbench-report
+
+# Open a checkpointed ClickBench heatmap by slug
+[group('clickbench')]
+clickbench-report-checkpoint slug:
+    cd "{{benchmark_dir}}" && env {{_bench_env}} just clickbench-report-checkpoint {{slug}}
+
+# ── TPC-H ─────────────────────────────────────────────────────────────────────
+
+# Build dbgen and load TPC-H dataset into PostgreSQL
+[group('tpch')]
+tpch-setup pg=pg_version scale="10":
+    cd "{{benchmark_dir}}" && env {{_bench_env}} just tpch-setup {{pg}} {{scale}}
+
+# Run the 22-query comparison (pgfusion vs PostgreSQL)
+[group('tpch')]
+tpch pg=pg_version runs="3":
+    cd "{{benchmark_dir}}" && env {{_bench_env}} just tpch {{pg}} {{runs}}
+
+# Run and checkpoint results
+[group('tpch')]
+tpch-checkpoint pg=pg_version runs="3" label="":
+    cd "{{benchmark_dir}}" && env {{_bench_env}} just tpch-checkpoint {{pg}} {{runs}} {{label}}
+
+# Run a single TPC-H query by number
+[group('tpch')]
+tpch-query query pg=pg_version:
+    cd "{{benchmark_dir}}" && env {{_bench_env}} just tpch-query {{query}} {{pg}}
+
+# Run all TPC-H queries except the given one
+[group('tpch')]
+tpch-skip skip pg=pg_version runs="3":
+    cd "{{benchmark_dir}}" && env {{_bench_env}} just tpch-skip {{skip}} {{pg}} {{runs}}
+
+# Archive current TPC-H results without re-running
+[group('tpch')]
+tpch-save label="":
+    cd "{{benchmark_dir}}" && env {{_bench_env}} just tpch-save {{label}}
+
+# Open latest TPC-H heatmap
+[group('tpch')]
+tpch-report:
+    cd "{{benchmark_dir}}" && env {{_bench_env}} just tpch-report
+
+# Open a checkpointed TPC-H heatmap by slug
+[group('tpch')]
+tpch-report-checkpoint slug:
+    cd "{{benchmark_dir}}" && env {{_bench_env}} just tpch-report-checkpoint {{slug}}
 
 # ── Docs ──────────────────────────────────────────────────────────────────────
 
