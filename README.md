@@ -79,7 +79,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Benchmarks
 
+See [docs/BENCHMARKING.md](docs/BENCHMARKING.md) for full setup, scale factors, allocator comparison, and CPU profiling.
+
 ### ClickBench (43 queries)
+
+> Requires: `export PGFUSION_BENCHMARK_DIR=/path/to/pgfusion-benchmark`
 
 ```bash
 just clickbench-setup pg18    # download & load dataset (~75 GB uncompressed)
@@ -93,7 +97,9 @@ just clickbench-report        # open latest heatmap in browser
 
 > **Note:** Some pgfusion results are incorrect (e.g. Q36, Q42). See `output/` in the checkpoint folder for per-query details.
 
-### TPC-H (22 queries, SF1)
+### TPC-H (22 queries, SF10)
+
+> Requires: `export PGFUSION_BENCHMARK_DIR=/path/to/pgfusion-benchmark`
 
 ```bash
 just tpch-setup pg18          # build dbgen and load dataset
