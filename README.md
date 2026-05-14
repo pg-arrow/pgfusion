@@ -1,14 +1,37 @@
 # pgfusion
 
-SQL query engine that reads PostgreSQL data files directly, without a running server. Built on [Apache DataFusion](https://datafusion.apache.org/) and [pg_arrow](../pg_arrow/).
+SQL query engine that reads PostgreSQL data files directly. Built on [Apache DataFusion](https://datafusion.apache.org/) and [pg_arrow](https://github.com/pg-arrow/pg_arrow).
 
 [![asciicast](https://asciinema.org/a/sIhowFJ7Mf8b4Hzk.svg)](https://asciinema.org/a/sIhowFJ7Mf8b4Hzk)
 
-Reads `PGDATA` directly, discovers tables from the system catalog, and runs SQL via DataFusion. Page reads and tuple decoding are handled by `pg_arrow`. Scans are partitioned across page ranges for parallel execution.
+Reads `PGDATA` directly, discovers tables from the system catalog, and executes SQL via DataFusion. Page reads and tuple decoding are handled by `pg_arrow`. Scans are partitioned across page ranges for parallel execution.
 
-## Quick start
+Consistent reads require either a running PostgreSQL server (live MVCC snapshots) or a cleanly checkpointed and vacuumed data directory (offline). See [Consistency](#consistency).
 
-Requires [Rust](https://rustup.rs) and [just](https://github.com/casey/just).
+---
+
+## Use Cases
+
+**Offline analytics on backups** — point pgfusion at a local `PGDATA` snapshot or backup and run SQL immediately, no restore needed. Querying S3-backed data directories (with per-table granularity) is coming soon.
+
+**Analytics sidecar on the primary** — run `pgfusion_server` alongside the primary PostgreSQL server, reading the same `PGDATA`. Offloads analytical queries without touching the primary's connection pool. Remote clients connect via Arrow Flight SQL; local use via `pgfusion_cli`. Use `--checkpoint` and `--consistent` for MVCC-correct reads. Memory must be budgeted carefully to avoid contention with the primary.
+
+**Analytical read replica** — on a streaming replica node, run `pgfusion_server` as a sidecar next to the standby PostgreSQL server. PostgreSQL handles replication and failover as normal; pgfusion serves analytical queries directly off the replica's `PGDATA`. Remote clients connect via Arrow Flight SQL; local access via `pgfusion_cli`. On failover, the promoted node continues serving both PostgreSQL and pgfusion traffic without any additional setup.
+
+---
+
+## Things to Note
+
+- **No PostgreSQL wire protocol** — remote access uses Arrow Flight SQL (`pgfusion_server`); local access uses the CLI (`pgfusion_cli`). psql and libpq clients will not work.
+- **Checkpoint per query** — `--consistent` issues a `CHECKPOINT` before each query to flush dirty pages. Until WAL streaming is implemented, this can cause disk I/O contention on a live primary. Use with care on write-heavy workloads.
+- **Memory sharing** — when running as a sidecar, pgfusion shares host memory with PostgreSQL. Set `query.memory_limit` in the config to cap pgfusion's footprint.
+- **No WAL streaming yet** — reads reflect the state at the last checkpoint, not real-time. WAL streaming is on the roadmap.
+
+---
+
+## Quick Start
+
+Requires [Rust](https://rustup.rs) 1.85+ (edition 2024) and [just](https://github.com/casey/just).
 
 ```bash
 just cli /path/to/pgdata                                  # interactive REPL
@@ -34,66 +57,25 @@ pgfusion_cli -d /path/to/pgdata --db-id 16384 \
 | `--pg-url <url>` | PostgreSQL connection string |
 | `--checkpoint` | Run `CHECKPOINT` before each query to flush dirty pages |
 | `--consistent` | Acquire a REPEATABLE READ snapshot per query for MVCC visibility |
-| `--debug-timing` | Print timing for each phase |
+| `--debug-timing` | Print per-phase timing (connect / snapshot / query / rollback) |
 
 **Offline** — run `CHECKPOINT` and `VACUUM` before stopping PostgreSQL, or do a clean shutdown.
 
-## Library usage
+## Library Usage
 
 ```rust
 use pgfusion_lib::create_session;
 
 #[tokio::main]
-async fn main() {
-    let ctx = create_session(16384).expect("failed to create session");
-    let df = ctx.sql("SELECT count(*) FROM pgbench_accounts").await.unwrap();
-    df.show().await.unwrap();
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ctx = create_session(16384)?;
+    let df = ctx.sql("SELECT count(*) FROM pgbench_accounts").await?;
+    df.show().await?;
+    Ok(())
 }
 ```
 
-## Testing
-
-### Setup (once)
-
-Install test tooling:
-
-```bash
-cargo install cargo-nextest    # parallel test runner (required)
-cargo install cargo-insta      # snapshot review tool
-cargo install cargo-llvm-cov   # coverage (optional)
-```
-
-Clone [`pg-test-harness`](https://github.com/pg-arrow/pg-test-harness) and set `PG_HARNESS_DIR`:
-
-```bash
-git clone https://github.com/pg-arrow/pg-test-harness /path/to/pg-test-harness
-export PG_HARNESS_DIR=/path/to/pg-test-harness   # add to ~/.zshrc or ~/.bashrc
-
-just pg-setup-pgbench pg18   # build PG18, init cluster, load pgbench SF=1 (~100k rows)
-just test-sql-seed           # seed SQL correctness snapshots against live PG (run once)
-```
-
-### Running tests
-
-```bash
-just test                    # unit tests (no PG needed)
-just test-sql                # SQL correctness: snapshot diff only (no PG needed)
-just test-sql-seed           # re-seed snapshots against live PG
-just test-sql-validate       # force re-validate all snapshots against live PG
-just test-consistency        # MVCC visibility tests (requires live PG)
-just test-consistency-full   # + #[ignore] tests (clog/rollback)
-just test-all                # test-sql + test-consistency
-```
-
-### Environment variables
-
-| Variable | Description |
-|---|---|
-| `PG_HARNESS_DIR` | Path to pg-test-harness clone (required for `pg-setup-*` recipes) |
-| `INSTA_SKIP_PG` | Set to skip PG connection in sql correctness tests (snapshot diff only) |
-| `INSTA_FORCE_PG_VALIDATE=1` | Force re-validate all snapshots against live PG |
-| `PG_TEST_NO_CHECKPOINT=1` | Skip CHECKPOINT in consistency tests (WAL streaming path) |
-| `PG_VERSION` | Default PostgreSQL version (`pg18`) |
+---
 
 ## Benchmarks
 
@@ -119,14 +101,48 @@ just tpch pg18                # run all 22 queries vs PostgreSQL
 just tpch-report              # open latest heatmap in browser
 ```
 
-## Docker
+---
 
-```bash
-just docker-build
-PGDATA_PATH=/path/to/pgdata just compose-cli
-PGDATA_PATH=/path/to/pgdata just compose-query "SELECT count(*) FROM hits"
-just compose-down
-```
+## Roadmap
+
+### Near-term
+
+- [ ] **Filter pushdown** — push DataFusion predicates into the heap scan to skip pages early
+- [ ] **PostgreSQL datatype parity** — fix `date`/`string` conversions (tracked via ClickBench Q36, Q42), add `interval` support
+- [ ] **TOAST / PGLZ decompression** — decompress inline PGLZ-compressed values during tuple decode
+- [ ] **`\x` expanded display** — column-per-row output mode in the REPL
+
+### Medium-term
+
+- [ ] **WAL streaming** — read WAL segments for point-in-time queries without per-query `CHECKPOINT`
+- [ ] **Flight SQL server** — expose pgfusion over Arrow Flight SQL (`pgfusion_server`)
+- [ ] **Buffer pool** — page cache to avoid re-reading hot pages across queries
+- [ ] **Index scans** — use PostgreSQL B-tree, Hash, GiST, GIN, and BRIN index files to accelerate point, range, and full-text lookups
+- [ ] **pgvector** — read `vector` columns and support approximate nearest-neighbor queries via IVFFlat/HNSW index files
+- [ ] **ParadeDB** — read BM25 index files for full-text search
+- [ ] **Citus** — discover and query sharded tables across distributed data directories
+- [ ] **Per-query allocation** — arena-per-query to avoid repeated alloc/dealloc on hot paths
+- [ ] **Tracing** — OpenTelemetry spans for query planning, scan, and decode phases
+
+### Long-term
+
+- [ ] **Disaggregated storage** — read heap files from object storage (S3, GCS) without a local copy
+- [ ] **io_uring** — async I/O backend for Linux for lower-latency page reads
+- [ ] **Auth/authz** — PostgreSQL-compatible authentication and row-level access control
+
+---
+
+## Deployment
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for CLI, server, Docker, and configuration options.
+
+## Testing
+
+See [docs/TESTING.md](docs/TESTING.md) for setup, test recipes, and environment variables.
+
+## Contributing
+
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). Bug reports and feature requests via GitHub Issues are welcome — PRs will open soon.
 
 ## Commands
 
