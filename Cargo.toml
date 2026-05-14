@@ -62,7 +62,15 @@ tonic = "0.14.6"
 insta = { version = "1", features = ["glob"] }
 
 [[bench]]
-name = "query_bench"
+name = "queries"
+harness = false
+
+[[bench]]
+name = "pipeline"
+harness = false
+
+[[bench]]
+name = "config"
 harness = false
 
 [profile.coverage]
