@@ -2,9 +2,10 @@ mod completer;
 mod exec;
 mod repl;
 
+use anyhow::{Context, Result};
 use clap::Parser;
 use mimalloc::MiMalloc;
-use pg_arrow::file::{error::PgError, set_data_dir};
+use pg_arrow::file::set_data_dir;
 use pgfusion_lib::config::PgFusionConfig;
 use pgfusion_lib::session::SessionOptions;
 
@@ -113,7 +114,7 @@ impl RuntimeConfig {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), PgError> {
+async fn main() -> Result<()> {
     env_logger::init();
 
     let cli = Cli::parse();
@@ -126,13 +127,13 @@ async fn main() -> Result<(), PgError> {
         .as_deref()
         .map(|p| PgFusionConfig::load(std::path::Path::new(p)))
         .transpose()
-        .map_err(|e| PgError::DecodeError(e.to_string()))?
+        .with_context(|| "failed to load config file")?
         .unwrap_or_default();
 
     let cfg = RuntimeConfig::build(&cli, &file_cfg);
 
     let ctx = pgfusion_lib::create_session_with_options(db_id, &cfg.session)
-        .expect("failed to create session");
+        .with_context(|| format!("failed to create session for db_id={db_id}"))?;
 
     if (cfg.checkpoint || cfg.consistent) && cfg.pg_url.is_none() {
         eprintln!("Warning: --checkpoint and --consistent require --pg-url");
@@ -148,7 +149,8 @@ async fn main() -> Result<(), PgError> {
 
     if let Some(ref file) = cli.file {
         return execute_file(&ctx, file, cfg.timing, cfg.debug_timing, checkpoint_url, snapshot_url)
-            .await;
+            .await
+            .with_context(|| format!("failed to execute file: {}", file));
     }
 
     run_repl(
