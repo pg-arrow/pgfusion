@@ -19,6 +19,31 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
+/// Pre-reserve N GiB of OS memory for mimalloc at startup.
+/// Controlled by PGFUSION_MIMALLOC_RESERVE_GB env var.
+/// Requires --features mimalloc-preallocate. No-op otherwise.
+#[cfg(feature = "mimalloc-preallocate")]
+fn mimalloc_preallocate() {
+    if let Ok(val) = std::env::var("PGFUSION_MIMALLOC_RESERVE_GB") {
+        if let Ok(gb) = val.trim().parse::<usize>() {
+            if gb > 0 {
+                let bytes = gb * 1024 * 1024 * 1024;
+                let mut arena_id: libmimalloc_sys::mi_arena_id_t = 0;
+                // SAFETY: called once at startup before any other allocations;
+                // arena_id is a valid out-pointer; commit=true, allow_large=true, exclusive=false.
+                unsafe {
+                    libmimalloc_sys::mi_reserve_os_memory_ex(
+                        bytes, true, true, false, &mut arena_id,
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[cfg(not(feature = "mimalloc-preallocate"))]
+fn mimalloc_preallocate() {}
+
 #[derive(Parser)]
 #[command(name = "pg_fusion_cli")]
 #[command(about = "Query PostgreSQL data files directly using SQL via DataFusion")]
@@ -119,6 +144,7 @@ impl RuntimeConfig {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    mimalloc_preallocate();
     env_logger::init();
 
     let cli = Cli::parse();

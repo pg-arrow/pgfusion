@@ -41,6 +41,10 @@ pub fn opts_mem_512m() -> SessionOptions {
     SessionOptions { memory_limit: Some(512 * 1024 * 1024), ..Default::default() }
 }
 
+pub fn opts_mem_15g() -> SessionOptions {
+    SessionOptions { memory_limit: Some(15 * 1024 * 1024 * 1024), ..Default::default() }
+}
+
 pub fn opts_batch_1024() -> SessionOptions {
     SessionOptions { batch_size: Some(1024), ..Default::default() }
 }

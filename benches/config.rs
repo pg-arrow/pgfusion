@@ -135,9 +135,29 @@ fn bench_config_tuned(c: &mut Criterion) {
     group.finish();
 }
 
+fn bench_config_memory_15g(c: &mut Criterion) {
+    let bctx = BenchContext::new();
+    let ctx = bctx.session(&opts_mem_15g());
+    let mut group = c.benchmark_group("config_memory_15g");
+    group.sample_size(10);
+    group.bench_function("count_star", |b| {
+        b.to_async(&bctx.rt).iter(|| async {
+            ctx.sql("SELECT COUNT(*) FROM pgbench_accounts").await.unwrap().collect().await.unwrap();
+        });
+    });
+    group.bench_function("group_by_bid", |b| {
+        b.to_async(&bctx.rt).iter(|| async {
+            ctx.sql("SELECT bid, COUNT(*) FROM pgbench_accounts GROUP BY bid ORDER BY COUNT(*) DESC")
+                .await.unwrap().collect().await.unwrap();
+        });
+    });
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_config_memory,
+    bench_config_memory_15g,
     bench_config_batch_size,
     bench_config_coalesce,
     bench_config_partitions,
