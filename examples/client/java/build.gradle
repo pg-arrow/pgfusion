@@ -1,0 +1,35 @@
+plugins {
+    id 'application'
+}
+
+group = 'io.pgfusion'
+version = '0.1.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.apache.arrow:flight-sql:18.0.0'
+    implementation 'io.grpc:grpc-netty-shaded:1.64.0'
+    implementation 'org.slf4j:slf4j-simple:2.0.13'
+}
+
+application {
+    mainClass = 'io.pgfusion.client.FlightSqlClient'
+}
+
+run {
+    if (project.hasProperty('endpoint')) {
+        args project.property('endpoint')
+    }
+    if (project.hasProperty('query')) {
+        args project.property('query')
+    }
+}
