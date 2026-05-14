@@ -29,6 +29,10 @@ rustyline = { version = "18.0.0", features = ["derive"] }
 mimalloc = "0.1"
 anyhow = "1"
 rustyline-derive = "0.12.0"
+tikv-jemallocator = { version = "0.6", optional = true }
+
+[features]
+jemalloc = ["tikv-jemallocator"]
 
 [lib]
 name = "pgfusion_lib"

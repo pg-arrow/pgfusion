@@ -4,7 +4,6 @@ mod repl;
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use mimalloc::MiMalloc;
 use pg_arrow::file::set_data_dir;
 use pgfusion_lib::config::PgFusionConfig;
 use pgfusion_lib::session::SessionOptions;
@@ -12,8 +11,13 @@ use pgfusion_lib::session::SessionOptions;
 use exec::{execute_file, run_command};
 use repl::{ReplState, run_repl};
 
+#[cfg(feature = "jemalloc")]
 #[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
+#[cfg(not(feature = "jemalloc"))]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[derive(Parser)]
 #[command(name = "pg_fusion_cli")]
