@@ -36,6 +36,8 @@ pgfusion_server -d /path/to/pgdata --db-id 16384 --port 32010
 | Python (Ibis) | `python/ibis_client.py` | `uv run ibis_client.py` |
 | TypeScript | `typescript/flight_sql_client.ts` | `bun install && bun run flight_sql_client.ts` |
 | Rust | `rust/flight_sql.rs` | `cargo run --example flight_sql_client` |
+| Go | `go/` | `cd go && go run . [endpoint] [query]` |
+| Java | `java/` | `cd java && javac src/main/java/io/pgfusion/client/FlightSqlClient.java && java -cp src/main/java io.pgfusion.client.FlightSqlClient` |
 | DuckDB | `sql/duckdb.sql` | `duckdb < duckdb.sql` |
 
 See `client/python/README.md` for Python setup details.
