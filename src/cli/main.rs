@@ -24,12 +24,12 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 #[command(about = "Query PostgreSQL data files directly using SQL via DataFusion")]
 struct Cli {
     /// Path to the PostgreSQL data directory (PGDATA)
-    #[arg(short = 'd', long)]
+    #[arg(short = 'D', long)]
     data_dir: String,
 
-    /// Database OID to read from (found under data_dir/base/<db_id>)
-    #[arg(long, default_value_t = 16384)]
-    db_id: usize,
+    /// Database name to connect to (resolved against pg_database; default: postgres)
+    #[arg(short = 'd', long, default_value = "postgres")]
+    db: String,
 
     /// Execute a SQL command and exit
     #[arg(short = 'c', long = "command")]
@@ -124,7 +124,10 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     set_data_dir(cli.data_dir.clone());
-    let db_id = cli.db_id;
+
+    let db_id = pg_arrow::table::get_database_oid(&cli.db)
+        .with_context(|| format!("failed to read pg_database under {}", cli.data_dir))?
+        .ok_or_else(|| anyhow::anyhow!("database not found: {}", cli.db))? as usize;
 
     let file_cfg = cli
         .config
@@ -137,7 +140,7 @@ async fn main() -> Result<()> {
     let cfg = RuntimeConfig::build(&cli, &file_cfg);
 
     let ctx = pgfusion_lib::create_session_with_options(db_id, &cfg.session)
-        .with_context(|| format!("failed to create session for db_id={db_id}"))?;
+        .with_context(|| format!("failed to create session for db={} (oid={db_id})", cli.db))?;
 
     if (cfg.checkpoint || cfg.consistent) && cfg.pg_url.is_none() {
         eprintln!("Warning: --checkpoint and --consistent require --pg-url");
@@ -158,12 +161,14 @@ async fn main() -> Result<()> {
     }
 
     run_repl(
-        &ctx,
+        ctx,
         ReplState {
             timing: cfg.timing,
             debug: cfg.debug_timing,
             data_dir: cli.data_dir,
+            db_name: cli.db,
             db_id,
+            session_opts: cfg.session,
             checkpoint_url: checkpoint_url.map(str::to_owned),
             snapshot_url: snapshot_url.map(str::to_owned),
         },

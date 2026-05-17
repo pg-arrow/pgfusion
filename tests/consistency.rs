@@ -25,24 +25,17 @@ use pgfusion_lib::{PgSnapshot as FusionSnapshot, create_session};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/// Verify reserved test rows are absent. Fails fast with a clear message if a
-/// prior test left dirty data (e.g. due to a panic before cleanup).
+/// Drop any leftover rows in the reserved aid ranges so this test starts clean,
+/// even if the previous test panicked before its own cleanup ran.
 async fn assert_clean_state(client: &tokio_postgres::Client) {
-    let row = client
-        .query_one(
-            "SELECT COUNT(*) FROM pgbench_accounts \
+    client
+        .execute(
+            "DELETE FROM pgbench_accounts \
              WHERE (aid BETWEEN 99901 AND 99910) OR (aid BETWEEN 90001 AND 91000)",
             &[],
         )
         .await
-        .expect("pre-test state check query failed");
-    let count: i64 = row.get(0);
-    assert_eq!(
-        count, 0,
-        "pre-test state check failed: {count} reserved test row(s) found in pgbench_accounts \
-         (aids 99901–99910 or 90001–91000). A previous test likely left dirty data. \
-         Run: DELETE FROM pgbench_accounts WHERE (aid BETWEEN 99901 AND 99910) OR (aid BETWEEN 90001 AND 91000);"
-    );
+        .expect("pre-test cleanup failed");
 }
 
 async fn setup() -> (pg_test_harness::PgConfig, SessionContext, tokio_postgres::Client) {

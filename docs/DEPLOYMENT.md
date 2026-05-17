@@ -6,7 +6,7 @@
 cargo build --release --bin pgfusion_cli
 
 # Interactive REPL
-pgfusion_cli -d /path/to/pgdata --db-id 16384
+pgfusion_cli -D /path/to/pgdata -d mydb
 
 # Single query
 pgfusion_cli -d /path/to/pgdata -c "SELECT count(*) FROM orders"
@@ -20,7 +20,7 @@ pgfusion_cli -d /path/to/pgdata -f queries.sql
 ```bash
 cargo build --release --bin pgfusion_server
 
-pgfusion_server -d /path/to/pgdata --db-id 16384
+pgfusion_server -D /path/to/pgdata -d mydb
 ```
 
 Remote clients connect via Arrow Flight SQL. PostgreSQL wire protocol is not supported.
@@ -64,7 +64,7 @@ CLI flags override config file values. See [`pgfusion_config.toml`](../pgfusion_
 Point pgfusion at a local `PGDATA` snapshot or backup. No running PostgreSQL server required, provided the data directory was checkpointed and vacuumed before the server was stopped.
 
 ```bash
-pgfusion_cli -d /path/to/pgdata-snapshot --db-id 16384
+pgfusion_cli -D /path/to/pgdata-snapshot -d mydb
 ```
 
 ### Analytics sidecar on the primary
@@ -72,7 +72,7 @@ pgfusion_cli -d /path/to/pgdata-snapshot --db-id 16384
 Run `pgfusion_server` on the same host as the primary PostgreSQL server. Set `memory_limit` to avoid starving the primary. Use `--checkpoint` and `--consistent` for MVCC-correct reads.
 
 ```bash
-pgfusion_server -d /var/lib/postgresql/data --db-id 16384 \
+pgfusion_server -D /var/lib/postgresql/data -d mydb \
   --pg-url "host=/var/run/postgresql port=5432 dbname=mydb user=myuser" \
   --checkpoint --consistent
 ```
@@ -84,7 +84,7 @@ pgfusion_server -d /var/lib/postgresql/data --db-id 16384 \
 On a streaming replica node, run `pgfusion_server` as a sidecar alongside the standby PostgreSQL server. PostgreSQL handles replication and failover; pgfusion reads directly from the replica's `PGDATA`.
 
 ```bash
-pgfusion_server -d /var/lib/postgresql/data --db-id 16384 \
+pgfusion_server -D /var/lib/postgresql/data -d mydb \
   --pg-url "host=/var/run/postgresql port=5432 dbname=mydb user=myuser" \
   --consistent
 ```

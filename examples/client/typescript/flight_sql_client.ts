@@ -5,7 +5,7 @@
  * and receive Arrow RecordBatches directly.
  *
  * Run:
- *   pgfusion_server -d /path/to/pgdata --db-id 16384 --port 32010
+ *   pgfusion_server -D /path/to/pgdata -d mydb --port 32010
  *   bun install && bun run flight_sql_client.ts
  */
 

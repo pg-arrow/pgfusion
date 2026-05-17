@@ -33,7 +33,7 @@ uv resolves and installs deps into an isolated cache automatically.
 Start pgfusion_server before running any example:
 
 ```bash
-pgfusion_server -d /path/to/pgdata --db-id 16384 --port 32010
+pgfusion_server -D /path/to/pgdata -d mydb --port 32010
 ```
 
 ## Examples

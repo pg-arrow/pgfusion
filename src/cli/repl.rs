@@ -36,6 +36,7 @@ pub(super) fn resolve_input(
     out: &mut impl Write,
     timing: &mut bool,
     data_dir: &str,
+    db_name: &str,
     db_id: usize,
 ) -> InputAction {
     match trimmed {
@@ -58,13 +59,23 @@ pub(super) fn resolve_input(
         }
 
         "\\l" => {
-            writeln!(out, "Multiple databases not supported. Connected to db_id {db_id}.").ok();
+            match pg_arrow::table::list_databases() {
+                Ok(dbs) => {
+                    writeln!(out, "  {:>10}  {}", "oid", "name").ok();
+                    for d in dbs {
+                        writeln!(out, "  {:>10}  {}", d.oid, d.datname).ok();
+                    }
+                }
+                Err(e) => {
+                    writeln!(out, "pg_database lookup failed: {e}").ok();
+                }
+            }
             return InputAction::Done;
         }
 
         "\\c" => {
             writeln!(out, "data_dir: {data_dir}").ok();
-            writeln!(out, "db_id:    {db_id}").ok();
+            writeln!(out, "database: {db_name} (oid={db_id})").ok();
             return InputAction::Done;
         }
 
@@ -94,7 +105,8 @@ fn print_help(out: &mut impl Write) -> io::Result<()> {
     writeln!(out, "  \\i <file>      Execute SQL from file")?;
     writeln!(out, "  \\c             Show current connection info")?;
     writeln!(out, "  \\x             Toggle expanded display (not yet supported)")?;
-    writeln!(out, "  \\l             List databases (not applicable)")?;
+    writeln!(out, "  \\l             List databases (reads pg_database)")?;
+    writeln!(out, "  \\c <db>        Switch to another database (also: USE <db>;)")?;
     writeln!(out, "  \\?             Show this help")?;
     writeln!(out, "  \\q             Quit (also: quit, exit, Ctrl-D)")
 }
@@ -103,17 +115,21 @@ pub(super) struct ReplState {
     pub timing: bool,
     pub debug: bool,
     pub data_dir: String,
+    pub db_name: String,
     pub db_id: usize,
+    pub session_opts: pgfusion_lib::session::SessionOptions,
     pub checkpoint_url: Option<String>,
     pub snapshot_url: Option<String>,
 }
 
-pub(super) async fn run_repl(ctx: &SessionContext, state: ReplState) {
+pub(super) async fn run_repl(ctx: SessionContext, mut state: ReplState) {
     let mut stdout = io::stdout();
     writeln!(stdout, "pg_fusion_cli").ok();
+    writeln!(stdout, "Connected to database \"{}\".", state.db_name).ok();
     writeln!(stdout, "Type \\? for help.\n").ok();
 
-    let table_names = collect_table_names(ctx).await;
+    let mut ctx = ctx;
+    let table_names = collect_table_names(&ctx).await;
     let helper = PgFusionHelper {
         completer: PgFusionCompleter { table_names },
         hinter: HistoryHinter::new(),
@@ -128,7 +144,8 @@ pub(super) async fn run_repl(ctx: &SessionContext, state: ReplState) {
     let snapshot_url = state.snapshot_url.as_deref();
 
     loop {
-        let readline = rl.readline("pg_fusion> ");
+        let prompt = format!("{}=> ", state.db_name);
+        let readline = rl.readline(&prompt);
         match readline {
             Ok(line) => {
                 let trimmed = line.trim();
@@ -151,7 +168,7 @@ pub(super) async fn run_repl(ctx: &SessionContext, state: ReplState) {
                     } else {
                         let start = Instant::now();
                         if let Err(e) =
-                            execute_file(ctx, path, false, debug, checkpoint_url, snapshot_url)
+                            execute_file(&ctx, path, false, debug, checkpoint_url, snapshot_url)
                                 .await
                         {
                             eprintln!("Error: {e}");
@@ -163,12 +180,39 @@ pub(super) async fn run_repl(ctx: &SessionContext, state: ReplState) {
                     continue;
                 }
 
-                match resolve_input(trimmed, &mut stdout, &mut timing, &state.data_dir, state.db_id)
-                {
+                // USE <db>;  or  \c <db>  — rebuild session against the named database.
+                if let Some(target) = parse_use_database(trimmed) {
+                    match switch_database(&target, &state.session_opts) {
+                        Ok((new_ctx, new_oid)) => {
+                            ctx = new_ctx;
+                            state.db_name = target.clone();
+                            state.db_id = new_oid;
+                            let names = collect_table_names(&ctx).await;
+                            rl.helper_mut().unwrap().completer.table_names = names;
+                            writeln!(
+                                stdout,
+                                "You are now connected to database \"{}\" (oid={}).",
+                                target, new_oid
+                            )
+                            .ok();
+                        }
+                        Err(e) => eprintln!("Error: {e}"),
+                    }
+                    continue;
+                }
+
+                match resolve_input(
+                    trimmed,
+                    &mut stdout,
+                    &mut timing,
+                    &state.data_dir,
+                    &state.db_name,
+                    state.db_id,
+                ) {
                     InputAction::Quit => break,
                     InputAction::Done => continue,
                     InputAction::Query(sql) => {
-                        run_command(ctx, &sql, timing, debug, checkpoint_url, snapshot_url).await
+                        run_command(&ctx, &sql, timing, debug, checkpoint_url, snapshot_url).await
                     }
                 }
             }
@@ -183,4 +227,37 @@ pub(super) async fn run_repl(ctx: &SessionContext, state: ReplState) {
             }
         }
     }
+}
+
+/// Parse `USE <name>;` or `\c <name>` — return Some(name) if it matches.
+fn parse_use_database(input: &str) -> Option<String> {
+    let s = input.trim().trim_end_matches(';').trim();
+    if let Some(rest) = s.strip_prefix("\\c").or_else(|| s.strip_prefix("\\connect")) {
+        let name = rest.trim();
+        if !name.is_empty() && !name.contains(char::is_whitespace) {
+            return Some(name.trim_matches('"').to_string());
+        }
+    }
+    // case-insensitive USE
+    let lower = s.to_ascii_lowercase();
+    if let Some(rest) = lower.strip_prefix("use ") {
+        let name = rest.trim();
+        if !name.is_empty() {
+            return Some(name.trim_matches('"').to_string());
+        }
+    }
+    None
+}
+
+/// Resolve a database name to its OID and build a fresh `SessionContext`.
+fn switch_database(
+    name: &str,
+    opts: &pgfusion_lib::session::SessionOptions,
+) -> Result<(SessionContext, usize), String> {
+    let oid = pg_arrow::table::get_database_oid(name)
+        .map_err(|e| format!("pg_database lookup failed: {e}"))?
+        .ok_or_else(|| format!("database not found: {name}"))? as usize;
+    let ctx = pgfusion_lib::create_session_with_options(oid, opts)
+        .map_err(|e| format!("create session: {e}"))?;
+    Ok((ctx, oid))
 }

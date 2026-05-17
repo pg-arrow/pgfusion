@@ -53,21 +53,26 @@ cargo install --git https://github.com/pg-arrow/pgfusion --bin pgfusion_cli
 
 ### Run the CLI
 
+Flags follow PostgreSQL convention: `-D` is the data directory (PGDATA), `-d` is the database name (resolved against `pg_database`; defaults to `postgres`).
+
 ```bash
-# Interactive REPL on a PGDATA directory
-pgfusion_cli -d /path/to/pgdata --db-id 16384
+# Interactive REPL on a PGDATA directory (defaults to db "postgres")
+pgfusion_cli -D /path/to/pgdata
+
+# Select a specific database by name
+pgfusion_cli -D /path/to/pgdata -d mydb
 
 # One-shot query
-pgfusion_cli -d /path/to/pgdata --db-id 16384 -c "SELECT count(*) FROM orders"
+pgfusion_cli -D /path/to/pgdata -d mydb -c "SELECT count(*) FROM orders"
 
 # Execute a file of SQL
-pgfusion_cli -d /path/to/pgdata --db-id 16384 -f queries.sql
+pgfusion_cli -D /path/to/pgdata -d mydb -f queries.sql
 
 # Time queries
-pgfusion_cli -d /path/to/pgdata --db-id 16384 -t -c "SELECT count(*) FROM orders"
+pgfusion_cli -D /path/to/pgdata -d mydb -t -c "SELECT count(*) FROM orders"
 ```
 
-Find `--db-id` (the database OID) with `SELECT oid FROM pg_database WHERE datname = '<your_db>';`.
+Inside the REPL, switch databases with `USE <name>;` or `\c <name>`, and list them with `\l`.
 
 ### Via `just` (inside a checkout)
 
@@ -84,7 +89,7 @@ By default pgfusion reads raw heap files with no MVCC filtering — dead tuples 
 **Against a live database** — use `--checkpoint` (flushes dirty pages) and `--consistent` (REPEATABLE READ snapshot for xmin visibility):
 
 ```bash
-pgfusion_cli -d /path/to/pgdata --db-id 16384 \
+pgfusion_cli -D /path/to/pgdata -d mydb \
   --pg-url "host=/tmp port=5432 dbname=mydb user=myuser" \
   --checkpoint --consistent \
   -c "SELECT count(*) FROM orders"

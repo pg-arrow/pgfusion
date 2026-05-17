@@ -46,6 +46,7 @@ struct PgTableExec {
     metrics: ExecutionPlanMetricsSet,
     snapshot: Option<ArrowPgSnapshot>,
     partition_count: usize,
+    total_pages: usize,
 }
 
 impl DisplayAs for PgTableExec {
@@ -93,7 +94,7 @@ impl ExecutionPlan for PgTableExec {
     ) -> Result<SendableRecordBatchStream> {
         let num_partitions = self.partition_count;
         let projection = self.projections.as_ref().map(|(_, cols)| cols.clone());
-        let total_pages = self.table_metadata.relpages.max(0) as usize;
+        let total_pages = self.total_pages;
         let pages_per_partition = (total_pages + num_partitions - 1) / num_partitions.max(1);
         let start = partition * pages_per_partition;
         let end = ((partition + 1) * pages_per_partition).min(total_pages);
@@ -146,6 +147,17 @@ impl PgTableExec {
             None
         };
 
+        let total_pages = {
+            let reader = pg_arrow::file::reader::TableFileReader::new(
+                db,
+                table_metadata.relfilenode as usize,
+            );
+            match reader.num_pages() {
+                Ok(n) => n,
+                Err(_) => table_metadata.relpages.max(0) as usize,
+            }
+        };
+
         Self {
             db_id: db,
             table_metadata,
@@ -160,6 +172,7 @@ impl PgTableExec {
             metrics: ExecutionPlanMetricsSet::new(),
             snapshot,
             partition_count,
+            total_pages,
         }
     }
 }

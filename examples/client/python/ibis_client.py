@@ -12,7 +12,7 @@ Ibis compiles DataFrame operations to SQL and executes against pgfusion_server.
 Same code runs on DuckDB, BigQuery, Snowflake — swap backend, keep logic.
 
 Run:
-    pgfusion_server -d /path/to/pgdata --db-id 16384 --port 32010
+    pgfusion_server -D /path/to/pgdata -d mydb --port 32010
     uv run ibis_client.py
 """
 

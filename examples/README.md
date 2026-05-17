@@ -26,7 +26,7 @@ cargo run --example count_query
 Requires pgfusion_server running:
 
 ```bash
-pgfusion_server -d /path/to/pgdata --db-id 16384 --port 32010
+pgfusion_server -D /path/to/pgdata -d mydb --port 32010
 ```
 
 | Language | Dir | Run |

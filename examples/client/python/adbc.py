@@ -12,7 +12,7 @@ ADBC (Arrow Database Connectivity) is the Arrow-native equivalent of JDBC/ODBC.
 Results arrive as Arrow RecordBatches — no conversion to Python rows.
 
 Run:
-    pgfusion_server -d /path/to/pgdata --db-id 16384 --port 32010
+    pgfusion_server -D /path/to/pgdata -d mydb --port 32010
     uv run adbc.py
 """
 

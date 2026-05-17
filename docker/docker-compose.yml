@@ -14,7 +14,7 @@ services:
         - default
     image: pgfusion:latest
     entrypoint: ["/usr/local/bin/pgfusion_cli"]
-    command: ["-d", "/pgdata", "--db-id", "16384"]
+    command: ["-D", "/pgdata", "-d", "mydb"]
     volumes:
       - "${PGDATA_PATH:?Set PGDATA_PATH to your PostgreSQL data directory}:/pgdata:ro"
     stdin_open: true

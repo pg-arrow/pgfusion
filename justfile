@@ -135,24 +135,26 @@ bench filter="":
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 # Interactive REPL
-# Usage: just cli /path/to/pgdata 16384
+# Usage: just cli /path/to/pgdata          (default db: postgres)
+#        just cli /path/to/pgdata tpch
 [group('cli')]
-cli data_dir db_id="16384":
-    cargo run --release --bin pgfusion_cli -- -d {{data_dir}} --db-id {{db_id}}
+cli data_dir db="postgres":
+    cargo run --release --bin pgfusion_cli -- -D {{data_dir}} -d {{db}}
 
 # Run a single SQL query with timing
 # Usage: just query /path/to/pgdata "SELECT count(*) FROM hits"
+#        just query /path/to/pgdata "SELECT ..." tpch
 [group('cli')]
-query data_dir sql db_id="16384":
+query data_dir sql db="postgres":
     cargo run --release --bin pgfusion_cli -- \
-        -d {{data_dir}} --db-id {{db_id}} -c {{sql}} -t
+        -D {{data_dir}} -d {{db}} -c {{sql}} -t
 
 # Run SQL from a file with timing
 # Usage: just query-file /path/to/pgdata queries.sql
 [group('cli')]
-query-file data_dir file db_id="16384":
+query-file data_dir file db="postgres":
     cargo run --release --bin pgfusion_cli -- \
-        -d {{data_dir}} --db-id {{db_id}} -f {{file}} -t
+        -D {{data_dir}} -d {{db}} -f {{file}} -t
 
 # Start the server (stub — panics until implemented)
 [group('cli')]
@@ -247,9 +249,9 @@ compose-down:
 # Flamegraph for the CLI against a PGDATA directory (requires cargo-flamegraph)
 # Usage: just flamegraph /path/to/pgdata "SELECT count(*) FROM hits"
 [group('profiling')]
-flamegraph data_dir sql db_id="16384":
+flamegraph data_dir sql db="postgres":
     cargo flamegraph --bin pgfusion_cli -o flamegraph.svg \
-        -- -d {{data_dir}} --db-id {{db_id}} -c {{sql}} -t
+        -- -D {{data_dir}} -d {{db}} -c {{sql}} -t
     open flamegraph.svg
 
 # Flamegraph for criterion query benchmarks
@@ -262,10 +264,10 @@ flamegraph-bench filter="":
 # Samply CPU profile for the CLI at 40000 Hz (macOS/Linux — opens in browser)
 # Usage: just samply /path/to/pgdata "SELECT count(*) FROM hits"
 [group('profiling')]
-samply data_dir sql db_id="16384":
+samply data_dir sql db="postgres":
     cargo build --profile profiling --bin pgfusion_cli
     samply record -r 40000 ./target/profiling/pgfusion_cli \
-        -d {{data_dir}} --db-id {{db_id}} -c {{sql}} -t
+        -D {{data_dir}} -d {{db}} -c {{sql}} -t
 
 # Samply CPU profile for criterion benchmarks at 40000 Hz
 # bench: queries | pipeline | config
