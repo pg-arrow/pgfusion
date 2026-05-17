@@ -3,9 +3,17 @@ name = "pgfusion"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
+description = "An Apache Arrow-native analytical query engine for PostgreSQL data files. Zero-ETL OLAP sidecar built on Apache DataFusion and pg_arrow."
+license = "Apache-2.0"
+repository = "https://github.com/pg-arrow/pgfusion"
+homepage = "https://github.com/pg-arrow/pgfusion"
+documentation = "https://docs.rs/pgfusion"
+readme = "README.md"
+keywords = ["postgres", "postgresql", "arrow", "datafusion", "olap"]
+categories = ["database", "command-line-utilities"]
 
 [dependencies]
-pg_arrow = { path = "../pg_arrow" }
+pg_arrow = { git = "ssh://git@github.com/pg-arrow/pg_arrow.git", rev = "2d982713a9e3b06da4c62c11928d94e0562fc28a" }
 
 serde = { version = "1.0", features = ["derive"] }
 toml = "1.1.0"
@@ -78,11 +86,11 @@ inherits = "test"
 
 [profile.profiling]
 inherits = "release"
-debug = true    # Keep debug symbols for profiler stack traces
-strip = false   # Don't strip symbols
+debug = true         # Keep debug symbols for profiler stack traces
+strip = false        # Don't strip symbols
 
 [profile.release]
-debug = true
+debug = false
 opt-level = 3 # Maximize optimizations
 # lto = "fat"       # "Fat" Link Time Optimization (cross-crate SIMD optimization)
 # codegen-units = 1 # Reduces parallelism during build to improve binary performance

@@ -1,5 +1,9 @@
 # pgfusion
 
+> **Status:** Work in progress. APIs, on-disk assumptions, and CLI flags may change. Not yet production-ready.
+>
+> **Current implementation:** reads PostgreSQL heap files **directly from disk** (no shared buffer pool yet) and decodes them into Apache Arrow via `pg_arrow`. A buffer-pool / page-cache layer is on the roadmap.
+
 SQL query engine that reads PostgreSQL data files directly. Built on [Apache DataFusion](https://datafusion.apache.org/) and [pg_arrow](https://github.com/pg-arrow/pg_arrow).
 
 [![asciicast](https://asciinema.org/a/sIhowFJ7Mf8b4Hzk.svg)](https://asciinema.org/a/sIhowFJ7Mf8b4Hzk)
@@ -22,16 +26,50 @@ Consistent reads require either a running PostgreSQL server (live MVCC snapshots
 
 ## Things to Note
 
-- **No PostgreSQL wire protocol** — remote access uses Arrow Flight SQL (`pgfusion_server`); local access uses the CLI (`pgfusion_cli`). psql and libpq clients will not work.
+- **No PostgreSQL wire protocol** — remote access uses Arrow Flight SQL (`pgfusion_server`, **WIP — not production-ready**); local access uses the CLI (`pgfusion_cli`). psql and libpq clients will not work.
 - **Checkpoint per query** — `--consistent` issues a `CHECKPOINT` before each query to flush dirty pages. Until WAL streaming is implemented, this can cause disk I/O contention on a live primary. Use with care on write-heavy workloads.
 - **Memory sharing** — when running as a sidecar, pgfusion shares host memory with PostgreSQL. Set `query.memory_limit` in the config to cap pgfusion's footprint.
 - **No WAL streaming yet** — reads reflect the state at the last checkpoint, not real-time. WAL streaming is on the roadmap.
+- **Platform support** — tested on macOS and Linux. Windows is not currently supported.
 
 ---
 
 ## Quick Start
 
-Requires [Rust](https://rustup.rs) 1.85+ (edition 2024) and [just](https://github.com/casey/just).
+Requires [Rust](https://rustup.rs) 1.85+ (edition 2024). [`just`](https://github.com/casey/just) is recommended but optional.
+
+### Install
+
+Install both binaries (`pgfusion_cli` and `pgfusion_server` — server is **WIP**) straight from git:
+
+```bash
+cargo install --git https://github.com/pg-arrow/pgfusion
+
+# Or just the CLI
+cargo install --git https://github.com/pg-arrow/pgfusion --bin pgfusion_cli
+```
+
+`cargo install` drops the binaries in `~/.cargo/bin/` — make sure that's on your `PATH`. Not yet published to crates.io.
+
+### Run the CLI
+
+```bash
+# Interactive REPL on a PGDATA directory
+pgfusion_cli -d /path/to/pgdata --db-id 16384
+
+# One-shot query
+pgfusion_cli -d /path/to/pgdata --db-id 16384 -c "SELECT count(*) FROM orders"
+
+# Execute a file of SQL
+pgfusion_cli -d /path/to/pgdata --db-id 16384 -f queries.sql
+
+# Time queries
+pgfusion_cli -d /path/to/pgdata --db-id 16384 -t -c "SELECT count(*) FROM orders"
+```
+
+Find `--db-id` (the database OID) with `SELECT oid FROM pg_database WHERE datname = '<your_db>';`.
+
+### Via `just` (inside a checkout)
 
 ```bash
 just cli /path/to/pgdata                                  # interactive REPL
