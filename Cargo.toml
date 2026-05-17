@@ -13,7 +13,7 @@ keywords = ["postgres", "postgresql", "arrow", "datafusion", "olap"]
 categories = ["database", "command-line-utilities"]
 
 [dependencies]
-pg_arrow = { git = "ssh://git@github.com/pg-arrow/pg_arrow.git", rev = "76ba2c73a1740743f7caa8e22470b6d8ca75c9c2" }
+pg_arrow = { git = "https://github.com/pg-arrow/pg_arrow.git", rev = "76ba2c73a1740743f7caa8e22470b6d8ca75c9c2" }
 
 serde = { version = "1.0", features = ["derive"] }
 toml = "1.1.0"
