@@ -2926,7 +2926,7 @@ dependencies = [
 [[package]]
 name = "pg-test-harness"
 version = "0.1.0"
-source = "git+ssh://git@github.com/pg-arrow/utils.git?rev=18e96545e741c4f0b8a759c099b8c12e7f638fde#18e96545e741c4f0b8a759c099b8c12e7f638fde"
+source = "git+https://github.com/pg-arrow/utils.git?rev=18e96545e741c4f0b8a759c099b8c12e7f638fde#18e96545e741c4f0b8a759c099b8c12e7f638fde"
 dependencies = [
  "tokio",
  "tokio-postgres",
@@ -2936,6 +2936,7 @@ dependencies = [
 [[package]]
 name = "pg_arrow"
 version = "0.1.0"
+source = "git+https://github.com/pg-arrow/pg_arrow.git?rev=76ba2c73a1740743f7caa8e22470b6d8ca75c9c2#76ba2c73a1740743f7caa8e22470b6d8ca75c9c2"
 dependencies = [
  "arrow",
  "bytes",

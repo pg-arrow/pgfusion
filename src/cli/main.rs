@@ -61,6 +61,11 @@ struct Cli {
     /// Path to a TOML config file. See pgfusion_config.toml for all options.
     #[arg(long, value_name = "FILE")]
     config: Option<String>,
+
+    /// Suppress row output; print only the total row count per query.
+    /// Useful for full-table scans where ASCII formatting dominates runtime.
+    #[arg(short = 'n', long = "count-only")]
+    count_only: bool,
 }
 
 fn parse_memory_size(s: &str) -> usize {
@@ -149,15 +154,31 @@ async fn main() -> Result<()> {
     let snapshot_url: Option<&str> = if cfg.consistent { cfg.pg_url.as_deref() } else { None };
 
     if let Some(command) = cli.command {
-        run_command(&ctx, &command, cfg.timing, cfg.debug_timing, checkpoint_url, snapshot_url)
-            .await;
+        run_command(
+            &ctx,
+            &command,
+            cfg.timing,
+            cfg.debug_timing,
+            checkpoint_url,
+            snapshot_url,
+            cli.count_only,
+        )
+        .await;
         return Ok(());
     }
 
     if let Some(ref file) = cli.file {
-        return execute_file(&ctx, file, cfg.timing, cfg.debug_timing, checkpoint_url, snapshot_url)
-            .await
-            .with_context(|| format!("failed to execute file: {}", file));
+        return execute_file(
+            &ctx,
+            file,
+            cfg.timing,
+            cfg.debug_timing,
+            checkpoint_url,
+            snapshot_url,
+            cli.count_only,
+        )
+        .await
+        .with_context(|| format!("failed to execute file: {}", file));
     }
 
     run_repl(
@@ -171,6 +192,7 @@ async fn main() -> Result<()> {
             session_opts: cfg.session,
             checkpoint_url: checkpoint_url.map(str::to_owned),
             snapshot_url: snapshot_url.map(str::to_owned),
+            count_only: cli.count_only,
         },
     )
     .await;

@@ -27,7 +27,11 @@ pub(super) async fn run_pg_checkpoint(pg_url: &str) -> Result<(), PgError> {
     Ok(())
 }
 
-pub(super) async fn execute_query(ctx: &SessionContext, sql: &str) -> Result<(), DataFusionError> {
+pub(super) async fn execute_query(
+    ctx: &SessionContext,
+    sql: &str,
+    count_only: bool,
+) -> Result<(), DataFusionError> {
     let cancel = CancellationToken::new();
     let cancel_clone = cancel.clone();
     let ctrlc_handle = tokio::spawn(async move {
@@ -39,12 +43,21 @@ pub(super) async fn execute_query(ctx: &SessionContext, sql: &str) -> Result<(),
     let mut stream = df.execute_stream().await?.boxed();
 
     let mut query_handle = tokio::task::spawn(async move {
+        let mut total_rows: u64 = 0;
         while let Some(batch) = stream.next().await {
             let batch = batch?;
+            if count_only {
+                total_rows += batch.num_rows() as u64;
+                continue;
+            }
             let formatted = pretty_format_batches(&[batch])
                 .map_err(|e| DataFusionError::External(Box::new(e)))?;
             // Lock stdout only for the write, not across the await.
             writeln!(io::stdout().lock(), "{formatted}")
+                .map_err(|e| DataFusionError::External(Box::new(e)))?;
+        }
+        if count_only {
+            writeln!(io::stdout().lock(), "{total_rows} row(s)")
                 .map_err(|e| DataFusionError::External(Box::new(e)))?;
         }
         Ok::<(), DataFusionError>(())
@@ -180,6 +193,7 @@ pub(super) async fn execute_file(
     debug: bool,
     checkpoint_url: Option<&str>,
     snapshot_url: Option<&str>,
+    count_only: bool,
 ) -> Result<(), PgError> {
     let sql = std::fs::read_to_string(path).map_err(|e| PgError::DecodeError(e.to_string()))?;
     for stmt in sql.split(';') {
@@ -191,12 +205,12 @@ pub(super) async fn execute_file(
         let start = Instant::now();
         if let Some(url) = snapshot_url {
             with_pg_snapshot(ctx, url, debug, || async {
-                if let Err(e) = execute_query(ctx, stmt).await {
+                if let Err(e) = execute_query(ctx, stmt, count_only).await {
                     eprintln!("Error: {e}");
                 }
             })
             .await;
-        } else if let Err(e) = execute_query(ctx, stmt).await {
+        } else if let Err(e) = execute_query(ctx, stmt, count_only).await {
             eprintln!("Error: {e}");
         }
         if timing {
@@ -213,17 +227,18 @@ pub(super) async fn run_command(
     debug: bool,
     checkpoint_url: Option<&str>,
     snapshot_url: Option<&str>,
+    count_only: bool,
 ) {
     maybe_checkpoint(checkpoint_url).await;
     let start = Instant::now();
     if let Some(url) = snapshot_url {
         with_pg_snapshot(ctx, url, debug, || async {
-            if let Err(e) = execute_query(ctx, sql).await {
+            if let Err(e) = execute_query(ctx, sql, count_only).await {
                 eprintln!("Error: {e}");
             }
         })
         .await;
-    } else if let Err(e) = execute_query(ctx, sql).await {
+    } else if let Err(e) = execute_query(ctx, sql, count_only).await {
         eprintln!("Error: {e}");
     }
     if timing {

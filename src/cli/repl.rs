@@ -103,6 +103,7 @@ fn print_help(out: &mut impl Write) -> io::Result<()> {
         "  \\debug         Toggle debug timing (pg connect / snapshot / query / rollback)"
     )?;
     writeln!(out, "  \\i <file>      Execute SQL from file")?;
+    writeln!(out, "  \\count         Toggle count-only output (suppress rows, show row count)")?;
     writeln!(out, "  \\c             Show current connection info")?;
     writeln!(out, "  \\x             Toggle expanded display (not yet supported)")?;
     writeln!(out, "  \\l             List databases (reads pg_database)")?;
@@ -120,6 +121,7 @@ pub(super) struct ReplState {
     pub session_opts: pgfusion_lib::session::SessionOptions,
     pub checkpoint_url: Option<String>,
     pub snapshot_url: Option<String>,
+    pub count_only: bool,
 }
 
 pub(super) async fn run_repl(ctx: SessionContext, mut state: ReplState) {
@@ -140,6 +142,7 @@ pub(super) async fn run_repl(ctx: SessionContext, mut state: ReplState) {
 
     let mut timing = state.timing;
     let mut debug = state.debug;
+    let mut count_only = state.count_only;
     let checkpoint_url = state.checkpoint_url.as_deref();
     let snapshot_url = state.snapshot_url.as_deref();
 
@@ -161,15 +164,28 @@ pub(super) async fn run_repl(ctx: SessionContext, mut state: ReplState) {
                     continue;
                 }
 
+                if trimmed == "\\count" {
+                    count_only = !count_only;
+                    writeln!(stdout, "Count-only output is {}.", if count_only { "on" } else { "off" }).ok();
+                    continue;
+                }
+
                 // \i needs async + ctx, handle before resolve_input
                 if let Some(path) = trimmed.strip_prefix("\\i").map(str::trim) {
                     if path.is_empty() {
                         eprintln!("Usage: \\i <file>");
                     } else {
                         let start = Instant::now();
-                        if let Err(e) =
-                            execute_file(&ctx, path, false, debug, checkpoint_url, snapshot_url)
-                                .await
+                        if let Err(e) = execute_file(
+                            &ctx,
+                            path,
+                            false,
+                            debug,
+                            checkpoint_url,
+                            snapshot_url,
+                            count_only,
+                        )
+                        .await
                         {
                             eprintln!("Error: {e}");
                         }
@@ -212,7 +228,16 @@ pub(super) async fn run_repl(ctx: SessionContext, mut state: ReplState) {
                     InputAction::Quit => break,
                     InputAction::Done => continue,
                     InputAction::Query(sql) => {
-                        run_command(&ctx, &sql, timing, debug, checkpoint_url, snapshot_url).await
+                        run_command(
+                            &ctx,
+                            &sql,
+                            timing,
+                            debug,
+                            checkpoint_url,
+                            snapshot_url,
+                            count_only,
+                        )
+                        .await
                     }
                 }
             }
