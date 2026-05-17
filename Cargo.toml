@@ -65,7 +65,7 @@ path = "examples/client/rust/flight_sql.rs"
 [dev-dependencies]
 arrow-flight = { version = "=58.0.0", features = ["flight-sql"] }
 criterion = { version = "0.6", features = ["async_tokio"] }
-pg-test-harness = { git = "ssh://git@github.com/pg-arrow/utils.git", rev = "18e96545e741c4f0b8a759c099b8c12e7f638fde" }
+pg-test-harness = { git = "https://github.com/pg-arrow/utils.git", rev = "18e96545e741c4f0b8a759c099b8c12e7f638fde" }
 tonic = "0.14.6"
 insta = { version = "1", features = ["glob"] }
 
