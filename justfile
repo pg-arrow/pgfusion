@@ -168,43 +168,45 @@ harness_setup := env_var_or_default("PG_HARNESS_DIR", "") + "/scripts/setup-post
 # Open a psql session for a given PostgreSQL version
 # Usage: just psql pg18   or   just psql pg18 test
 [group('postgres')]
-psql pg=pg_version db="postgres":
-    @bin=$(awk -v s="postgres.{{pg}}" '$0~"\\["s"\\]"{f=1} f&&$1=="bin_dir"{gsub(/.*= *"|"$/,""); print $0; exit}' pg-test-config.toml); \
+psql pg=pg_version db="postgres": check-harness
+    @cfg="$PG_HARNESS_DIR/pg-test-config.toml"; \
+     bin=$(awk -v s="postgres.{{pg}}" '$0~"\\["s"\\]"{f=1} f&&$1=="bin_dir"{gsub(/.*= *"|"$/,""); print $0; exit}' "$cfg"); \
+     case "$bin" in /*) ;; *) bin="$PG_HARNESS_DIR/$bin" ;; esac; \
      DYLD_LIBRARY_PATH="$bin/../lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}" "$bin/psql" {{db}}
 
 [private]
 check-harness:
-    @[ -n "${PG_HARNESS_DIR:-}" ] || { echo "error: PG_HARNESS_DIR is not set\nSet it to your pg-test-harness clone: export PG_HARNESS_DIR=/path/to/pg-test-harness"; exit 1; }
+    @[ -n "${PG_HARNESS_DIR:-}" ] || { echo "error: PG_HARNESS_DIR is not set\nSet it to your pg-test-harness clone: export PG_HARNESS_DIR=/path/to/utils/pg-test-harness"; exit 1; }
 
 # Full setup: build from source, init cluster, load test data
 [group('postgres')]
 pg-setup pg=pg_version: check-harness
-    TARGET_DIR="$(pwd)" TESTDATA_DIR="$(pwd)/testdata" bash {{harness_setup}} -b {{pg}} -B -i -t
+    bash {{harness_setup}} -b {{pg}} -B -i -t
 
 # Full setup with simple schema
 [group('postgres')]
 pg-setup-simple pg=pg_version: check-harness
-    TARGET_DIR="$(pwd)" TESTDATA_DIR="$(pwd)/testdata" bash {{harness_setup}} -b {{pg}} -B -i -t -s
+    bash {{harness_setup}} -b {{pg}} -B -i -t -s
 
 # Build PostgreSQL source only
 [group('postgres')]
 pg-build pg=pg_version: check-harness
-    TARGET_DIR="$(pwd)" TESTDATA_DIR="$(pwd)/testdata" bash {{harness_setup}} -b {{pg}} -B
+    bash {{harness_setup}} -b {{pg}} -B
 
 # Init cluster only (source must already be built)
 [group('postgres')]
 pg-init pg=pg_version: check-harness
-    TARGET_DIR="$(pwd)" TESTDATA_DIR="$(pwd)/testdata" bash {{harness_setup}} -b {{pg}} -i
+    bash {{harness_setup}} -b {{pg}} -i
 
 # Load test data into an already-initialised cluster
 [group('postgres')]
 pg-testdata pg=pg_version: check-harness
-    TARGET_DIR="$(pwd)" TESTDATA_DIR="$(pwd)/testdata" bash {{harness_setup}} -b {{pg}} -t
+    bash {{harness_setup}} -b {{pg}} -t
 
 # Create pgbench_test db with pgbench data (SF=1 by default; override with PGBENCH_SCALE=N or PGBENCH_DBNAME=name)
 [group('postgres')]
 pg-setup-pgbench pg=pg_version: check-harness
-    TARGET_DIR="$(pwd)" TESTDATA_DIR="$(pwd)/testdata" bash {{harness_setup}} -b {{pg}} -p
+    bash {{harness_setup}} -b {{pg}} -p
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 
@@ -284,7 +286,7 @@ flamegraph-open:
 # Requires: PGFUSION_BENCHMARK_DIR=/path/to/pgfusion-benchmark
 
 benchmark_dir := env_var_or_default("PGFUSION_BENCHMARK_DIR", "")
-_bench_env := "PG_ARROW_TEST_CONFIG=" + env_var_or_default("PG_ARROW_TEST_CONFIG", justfile_directory() / "pg-test-config.toml") + " PROJECT_ROOT=" + justfile_directory()
+_bench_env := "PG_ARROW_TEST_CONFIG=" + env_var_or_default("PG_ARROW_TEST_CONFIG", env_var_or_default("PG_HARNESS_DIR", "") / "pg-test-config.toml") + " PROJECT_ROOT=" + justfile_directory()
 
 # Download and load the ClickBench hits dataset into PostgreSQL
 [group('clickbench')]

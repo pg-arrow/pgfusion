@@ -13,7 +13,7 @@ keywords = ["postgres", "postgresql", "arrow", "datafusion", "olap"]
 categories = ["database", "command-line-utilities"]
 
 [dependencies]
-pg_arrow = { git = "https://github.com/pg-arrow/pg_arrow.git", rev = "76ba2c73a1740743f7caa8e22470b6d8ca75c9c2" }
+pg_arrow = { git = "https://github.com/pg-arrow/pg_arrow.git", rev = "a72661b4cad50c5eb1542840b397727d6a54b453" }
 
 serde = { version = "1.0", features = ["derive"] }
 toml = "1.1.0"
@@ -65,7 +65,7 @@ path = "examples/client/rust/flight_sql.rs"
 [dev-dependencies]
 arrow-flight = { version = "=58.0.0", features = ["flight-sql"] }
 criterion = { version = "0.6", features = ["async_tokio"] }
-pg-test-harness = { git = "https://github.com/pg-arrow/utils.git", rev = "18e96545e741c4f0b8a759c099b8c12e7f638fde" }
+pg-test-harness = { git = "https://github.com/pg-arrow/utils.git", rev = "34dc2ab660ec397cb30105d8630fa9285ecdb205" }
 tonic = "0.14.6"
 insta = { version = "1", features = ["glob"] }
 

@@ -31,6 +31,7 @@ Consistent reads require either a running PostgreSQL server (live MVCC snapshots
 - **Memory sharing** — when running as a sidecar, pgfusion shares host memory with PostgreSQL. Set `query.memory_limit` in the config to cap pgfusion's footprint.
 - **No WAL streaming yet** — reads reflect the state at the last checkpoint, not real-time. WAL streaming is on the roadmap.
 - **Platform support** — tested on macOS and Linux. Windows is not currently supported.
+- **PostgreSQL version** — only tested against PostgreSQL 18. Older versions may work, but multi-version testing is WIP.
 
 ---
 
