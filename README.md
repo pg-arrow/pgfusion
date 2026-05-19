@@ -127,7 +127,12 @@ See [docs/BENCHMARKING.md](docs/BENCHMARKING.md) for full setup, scale factors, 
 
 ### ClickBench (43 queries)
 
-> Requires: `export PGFUSION_BENCHMARK_DIR=/path/to/pgfusion-benchmark`
+> Requires:
+> ```bash
+> export PG_HARNESS_DIR=/path/to/utils/pg-test-harness
+> export PGFUSION_BENCHMARK_DIR=/path/to/pgfusion-benchmark
+> # PGFUSION_ROOT is set automatically to the pgfusion root ($(pwd))
+> ```
 
 ```bash
 just clickbench-setup pg18    # download & load dataset (~75 GB uncompressed)
@@ -143,7 +148,7 @@ just clickbench-report        # open latest heatmap in browser
 
 ### TPC-H (22 queries, SF10)
 
-> Requires: `export PGFUSION_BENCHMARK_DIR=/path/to/pgfusion-benchmark`
+> Requires: same env vars as ClickBench above (`PG_HARNESS_DIR`, `PGFUSION_BENCHMARK_DIR`, `PROJECT_ROOT`)
 
 ```bash
 just tpch-setup pg18          # build dbgen and load dataset

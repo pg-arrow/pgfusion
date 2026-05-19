@@ -284,9 +284,10 @@ flamegraph-open:
 
 # ── ClickBench ────────────────────────────────────────────────────────────────
 # Requires: PGFUSION_BENCHMARK_DIR=/path/to/pgfusion-benchmark
+# Requires: PG_HARNESS_DIR=/path/to/pg-test-harness
 
 benchmark_dir := env_var_or_default("PGFUSION_BENCHMARK_DIR", "")
-_bench_env := "PG_ARROW_TEST_CONFIG=" + env_var_or_default("PG_ARROW_TEST_CONFIG", env_var_or_default("PG_HARNESS_DIR", "") / "pg-test-config.toml") + " PROJECT_ROOT=" + justfile_directory()
+_bench_env := "PGFUSION_ROOT=" + justfile_directory()
 
 # Download and load the ClickBench hits dataset into PostgreSQL
 [group('clickbench')]
