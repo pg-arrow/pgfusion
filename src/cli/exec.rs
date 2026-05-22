@@ -156,9 +156,9 @@ pub(super) async fn with_pg_snapshot<F, Fut>(
                 eprintln!(
                     "[debug] snapshot acquire: {} (xmin={} xmax={} xip={})",
                     format_elapsed(t_snap.elapsed()),
-                    snap.xmin,
-                    snap.xmax,
-                    snap.xip.len()
+                    snap.0.xmin,
+                    snap.0.xmax,
+                    snap.0.xip.len()
                 );
             }
             ctx.state_ref()

@@ -16,9 +16,8 @@ use datafusion::physical_plan::{
     DisplayAs, DisplayFormatType, ExecutionPlan, PlanProperties, SendableRecordBatchStream,
 };
 use futures::Stream;
-use crate::snapshot::PgSnapshot;
+use crate::snapshot::{ArrowPgSnapshot, PgSnapshot};
 use pg_arrow::file::reader::{AsyncBatchStream, Oid};
-use pg_arrow::heap::snapshot::PgSnapshot as ArrowPgSnapshot;
 use pg_arrow::types::{PgClass, PgSchema};
 use std::any::Any;
 use std::pin::Pin;
@@ -242,11 +241,7 @@ impl TableProvider for CustomDataSource {
             .options()
             .extensions
             .get::<PgSnapshot>()
-            .map(|s| ArrowPgSnapshot {
-                xmin: s.xmin,
-                xmax: s.xmax,
-                xip: s.xip.clone(),
-            });
+            .map(|s| s.0.clone());
         self.create_physical_plan(projection, self.schema(), snapshot)
     }
 }

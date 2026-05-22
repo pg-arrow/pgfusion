@@ -1,69 +1,25 @@
 use datafusion::common::config::{ConfigExtension, ExtensionOptions};
 use datafusion::common::Result;
+pub use pg_arrow::heap::snapshot::PgSnapshot as ArrowPgSnapshot;
 
-/// PostgreSQL transaction snapshot used for MVCC visibility checks.
+/// DataFusion session-config extension carrying a PostgreSQL MVCC snapshot.
 ///
-/// Obtained by running:
-///   `SELECT txid_current_snapshot()` inside a REPEATABLE READ transaction.
-///
-/// A tuple's xmin is visible when:
-///   xmin < xmax_snap  AND  xmin not in xip
+/// Wraps `pg_arrow::heap::snapshot::PgSnapshot` and adds the DataFusion
+/// `ConfigExtension` / `ExtensionOptions` boilerplate so it can travel through
+/// `SessionConfig::extensions`.
 #[derive(Debug, Clone, Default)]
-pub struct PgSnapshot {
-    /// Lowest xid still active when snapshot was taken (all xids < xmin are committed).
-    pub xmin: u32,
-    /// First xid not yet assigned (all xids >= xmax are invisible).
-    pub xmax: u32,
-    /// In-progress xids at snapshot time (xmin <= xid < xmax but not yet committed).
-    pub xip: Vec<u32>,
-}
+pub struct PgSnapshot(pub ArrowPgSnapshot);
 
 impl PgSnapshot {
-    /// Parse PostgreSQL snapshot string format: `xmin:xmax:xip_list`
-    /// e.g. `"100:105:101,103"`
+    /// Parse PostgreSQL snapshot string: `"xmin:xmax:xip_list"`.
     pub fn parse(s: &str) -> Option<Self> {
-        let parts: Vec<&str> = s.splitn(3, ':').collect();
-        if parts.len() < 2 {
-            return None;
-        }
-        let xmin = parts[0].trim().parse::<u32>().ok()?;
-        let xmax = parts[1].trim().parse::<u32>().ok()?;
-        let xip = if parts.len() == 3 && !parts[2].trim().is_empty() {
-            parts[2]
-                .split(',')
-                .filter_map(|x| x.trim().parse::<u32>().ok())
-                .collect()
-        } else {
-            vec![]
-        };
-        Some(Self { xmin, xmax, xip })
-    }
-
-    /// Returns true if t_xmin is visible under this snapshot.
-    ///
-    /// Visibility rule (simplified, post-CHECKPOINT):
-    ///   - xmin < xmin_snap  → always visible (committed before snapshot)
-    ///   - xmin >= xmax_snap → never visible (started after snapshot)
-    ///   - xmin in xip       → not visible (in-progress at snapshot time)
-    ///   - otherwise         → visible
-    pub fn xmin_visible(&self, t_xmin: u32) -> bool {
-        const FROZEN_XID: u32 = 2;
-        if t_xmin <= FROZEN_XID {
-            return true; // frozen tuples are always visible
-        }
-        if t_xmin < self.xmin {
-            return true;
-        }
-        if t_xmin >= self.xmax {
-            return false;
-        }
-        !self.xip.contains(&t_xmin)
+        ArrowPgSnapshot::parse(s).map(Self)
     }
 }
 
-// ── ConfigExtension boilerplate ──────────────────────────────────────────────
-// Serialise snapshot to/from string so DataFusion can clone and pass it through
-// SessionConfig extensions.
+impl From<ArrowPgSnapshot> for PgSnapshot {
+    fn from(s: ArrowPgSnapshot) -> Self { Self(s) }
+}
 
 impl ConfigExtension for PgSnapshot {
     const PREFIX: &'static str = "pg_snapshot";
@@ -84,10 +40,10 @@ impl ExtensionOptions for PgSnapshot {
 
     fn set(&mut self, key: &str, value: &str) -> Result<()> {
         match key {
-            "xmin" => self.xmin = value.parse().unwrap_or(0),
-            "xmax" => self.xmax = value.parse().unwrap_or(0),
+            "xmin" => self.0.xmin = value.parse().unwrap_or(0),
+            "xmax" => self.0.xmax = value.parse().unwrap_or(0),
             "xip" => {
-                self.xip = value
+                self.0.xip = value
                     .split(',')
                     .filter(|s| !s.is_empty())
                     .filter_map(|s| s.parse::<u32>().ok())

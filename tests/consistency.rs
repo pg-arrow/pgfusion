@@ -50,11 +50,11 @@ async fn setup() -> (pg_test_harness::PgConfig, SessionContext, tokio_postgres::
 
 /// Inject a harness PgSnapshot into the pgfusion session config extensions.
 fn inject_snapshot(ctx: &SessionContext, snap: &PgSnapshot) {
-    let fusion_snap = FusionSnapshot {
+    let fusion_snap = FusionSnapshot(pg_arrow::heap::snapshot::PgSnapshot {
         xmin: snap.xmin,
         xmax: snap.xmax,
         xip: snap.xip.clone(),
-    };
+    });
     ctx.state_ref()
         .write()
         .config_mut()
