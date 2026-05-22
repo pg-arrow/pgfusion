@@ -20,6 +20,13 @@ impl BenchContext {
         Self { db_id, rt: Runtime::new().unwrap() }
     }
 
+    pub fn new_tpch() -> Self {
+        let config = read_pg_config(env!("CARGO_MANIFEST_DIR"), "pg18");
+        pg_arrow::file::set_data_dir(config.data_dir.clone());
+        let db_id = db_oid_blocking("tpch");
+        Self { db_id, rt: Runtime::new().unwrap() }
+    }
+
     pub fn session(&self, opts: &SessionOptions) -> SessionContext {
         create_session_with_options(self.db_id, opts).expect("failed to create session")
     }
